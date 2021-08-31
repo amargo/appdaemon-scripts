@@ -26,6 +26,8 @@ Eon:
   username: '<felhasználói azonosítód>'
   password: '<felhasználói jelszavad>'
   report_id: '<reportId>'
+  chart_id: '<chartId>'
+  last_reset: "2020-09-14T11:25:00+00:00" When E.ON reading of meters
   every_hour: 6
   hyphen: '<->'
   offset: 0
