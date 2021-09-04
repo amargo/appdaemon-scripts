@@ -7,7 +7,7 @@ This repository containing all of my Appdaemon application scripts.
 ## How to use
 
 If you have never used Appdaemon before please you read the following tutorials:
-[tutorial](https://appdaemon.readthedocs.io/en/latest/TUTORIAL.html)
+[tutorial](https://appdaemon.readthedocs.io/en/latest/HASS_TUTORIAL.html)
 [guide](https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html)
 
 ## App list
