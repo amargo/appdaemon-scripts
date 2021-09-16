@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import datetime
 import time
+import pytz
 import pymysql.cursors
 
 class Eon(hass.Hass):
@@ -41,106 +42,96 @@ class Eon(hass.Hass):
             self.log(datetime.datetime.now(), "Error retrive data from {0}.".format(str(ex)))
 
     def get_chart_data(self, profile_data_url, session, eon_1_8_0_report, eon_2_8_0_report):
-        jsonResponse = self.get_data(profile_data_url, session, self.args['chart_id'], 2000)
         sensor_1_8_0_sensor = self.args['1_8_0_sensor']
         sensor_2_8_0_sensor = self.args['2_8_0_sensor']
-        # self.log("eon_positive_a_energy_power len: %s", len(jsonResponse[0]['data']))
-        # self.log("eon_negative_a_energy_power len: %s", len(jsonResponse[1]['data']))
-        eon_positive_a = {}
-        eon_positive_a_total = {}
-        for positive_a in jsonResponse[0]['data']:
-            eon_positive_a_value = round(positive_a['value'], 5)
-            eon_positive_a_time = datetime.datetime.strptime(positive_a['time'], '%Y-%m-%dT%H:%M:%S')
-            extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_positive_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-            rows = self.get_states('sensor.eon_positive_a_energy_power', extra_parameter)
-            eon_positive_a[eon_positive_a_time] = eon_positive_a_value
-            eon_1_8_0_report_time, eon_1_8_0_report_value = self.get_value_from_datetime_dict(eon_1_8_0_report, eon_positive_a_time)
-            if eon_1_8_0_report_value is not None:
-                extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_positive_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-                rows = self.get_states(sensor_1_8_0_sensor, extra_parameter)
-                eon_positive_a_total_value = eon_1_8_0_report_value + eon_positive_a_value
-                eon_positive_a_total_value = round(eon_positive_a_total_value, 5)
-                eon_1_8_0_report[eon_1_8_0_report_time] = eon_positive_a_total_value
-                eon_positive_a_total[eon_positive_a_time] = eon_positive_a_total_value
-                if len(rows) == 0 and eon_positive_a_total_value > 0:
-                    self.set_state(sensor_1_8_0_sensor, state = eon_positive_a_total_value, unit_of_measurement = 'kWh', attributes = { "state_class": "measurement", "last_reset": self.args['last_reset'], "last_changed": eon_positive_a_time, "unit_of_measurement": 'kWh', "friendly_name": "EON import energy total", "device_class": "energy"})
-                    # self.log("sensor.eon_1_8_0_energy_total: %s - %s", eon_positive_a_time, eon_positive_a_total_value)
-            if len(rows) == 0:
-                self.set_state("sensor.eon_positive_a_energy_power", state = eon_positive_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": "EON +A energy power", "last_changed": eon_positive_a_time, "unit_of_measurement": 'kWh', "device_class": "power"})
+        positive_a_energy = self.args['positive_a_energy']
+        negative_a_energy = self.args['negative_a_energy']
+        timezone = pytz.timezone("Europe/Budapest")
 
-        if len(eon_positive_a_total) > 0:
-            time.sleep(5)
-            eon_positive_a_total = {key:val for key, val in eon_positive_a_total.items() if val != 0}
-            self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_positive_a_total)
+        for eon_daily_time, eon_daily_value in eon_1_8_0_report.items():
+            eon_positive_a = {}
+            eon_positive_a_total = {}
 
-        if len(eon_positive_a) > 0:
-            time.sleep(5)
-            self.normalize_eon_chart_data('sensor.eon_positive_a_energy_power', eon_positive_a)
+            eon_daily_time_tmp = eon_daily_time.astimezone(tz=timezone)
+            final_since_time = eon_daily_time_tmp + datetime.timedelta(minutes=14)
+            final_until_time = final_since_time + datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
+            jsonResponse = self.get_data(profile_data_url, session, self.args['chart_id'], 200, final_since_time, final_until_time)
 
-        eon_negative_a = {}
-        eon_negative_a_total = {}
-        for negative_a in jsonResponse[1]['data']:
-            eon_negative_a_value = round(negative_a['value'], 5)
-            eon_negative_a_time = datetime.datetime.strptime(negative_a['time'], '%Y-%m-%dT%H:%M:%S')
-            extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_negative_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-            rows = self.get_states('sensor.eon_negative_a_energy_power', extra_parameter)
-            eon_negative_a[eon_negative_a_time] = eon_negative_a_value
-            eon_2_8_0_report_time, eon_2_8_0_report_value = self.get_value_from_datetime_dict(eon_2_8_0_report, eon_negative_a_time)
-            if eon_2_8_0_report_value is not None:
-                extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_negative_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-                rows = self.get_states(sensor_2_8_0_sensor, extra_parameter)
-                eon_negative_a_total_value = eon_2_8_0_report_value + eon_negative_a_value
-                eon_negative_a_total_value = round(eon_negative_a_total_value, 5)
-                eon_2_8_0_report[eon_2_8_0_report_time] = eon_negative_a_total_value
-                eon_negative_a_total[eon_negative_a_time] = eon_negative_a_total_value
-                if len(rows) == 0 and eon_negative_a_total_value > 0:
-                    self.set_state(sensor_2_8_0_sensor, state = eon_negative_a_total_value, unit_of_measurement = 'kWh', attributes = { "state_class": "measurement", "last_reset": self.args['last_reset'], "last_changed": eon_negative_a_time, "unit_of_measurement": 'kWh', "friendly_name": "EON export energy total", "device_class": "energy"})
-                    # self.log("sensor.eon_2_8_0_energy_total: %s - %s", eon_negative_a_time, eon_negative_a_total_value)
-            if len(rows) == 0:
-                self.set_state("sensor.eon_negative_a_energy_power", state = eon_negative_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": "EON -A energy power", "last_changed": eon_negative_a_time, "unit_of_measurement": 'kWh', "device_class": "power"})
+            eon_sum_value = eon_daily_value
+            for positive_a in jsonResponse[0]['data']:
+                eon_sum_value = self.collect_chart_data(positive_a, positive_a_energy, eon_positive_a, sensor_1_8_0_sensor, eon_1_8_0_report, eon_positive_a_total, eon_daily_time, eon_sum_value, sensor_1_8_0_sensor, "EON +A energy power", "EON consumption energy total")
+        
+            if len(eon_positive_a_total) > 0:
+                time.sleep(5)
+                eon_positive_a_total = {key:val for key, val in eon_positive_a_total.items() if val != 0}
+                self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_positive_a_total)
 
-        if len(eon_negative_a_total) > 0:
-            time.sleep(5)
-            eon_negative_a_total = {key:val for key, val in eon_negative_a_total.items() if val != 0}
-            self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_negative_a_total)
+            if len(eon_positive_a) > 0:
+                time.sleep(5)
+                self.normalize_eon_chart_data(positive_a_energy, eon_positive_a)
 
-        if len(eon_negative_a) > 0:
-            time.sleep(5)
-            self.normalize_eon_chart_data('sensor.eon_negative_a_energy_power', eon_negative_a)
 
+        for eon_daily_time, eon_daily_value in eon_2_8_0_report.items():
+            eon_negative_a = {}
+            eon_negative_a_total = {}
+            eon_daily_time_tmp = eon_daily_time.astimezone(tz=timezone)
+            final_since_time = eon_daily_time_tmp + datetime.timedelta(minutes=14)
+            final_until_time = final_since_time + datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
+            jsonResponse = self.get_data(profile_data_url, session, self.args['chart_id'], 200, final_since_time, final_until_time)
+
+            eon_sum_value = eon_daily_value
+            for negative_a in jsonResponse[1]['data']:
+                eon_sum_value = self.collect_chart_data(negative_a, negative_a_energy, eon_negative_a, sensor_2_8_0_sensor, eon_2_8_0_report, eon_negative_a_total, eon_daily_time, eon_sum_value, sensor_2_8_0_sensor, "EON -A energy power", "EON export energy total")
+
+            if len(eon_negative_a_total) > 0:
+                time.sleep(5)
+                eon_negative_a_total = {key:val for key, val in eon_negative_a_total.items() if val != 0}
+                self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_negative_a_total)
+
+            if len(eon_negative_a) > 0:
+                time.sleep(5)
+                self.normalize_eon_chart_data('sensor.eon_negative_a_energy_power', eon_negative_a)
+
+    def collect_chart_data(self, a, a_energy, eon_a, sensor, eon_report, eon_a_total, eon_report_time, eon_report_value, eon_sensor, friendly_name, total_friendly_name):
+        eon_a_value = round(a['value'], 5)
+        eon_a_time = datetime.datetime.strptime(a['time'], '%Y-%m-%dT%H:%M:%S').astimezone(tz=datetime.timezone.utc)
+        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        eon_a[eon_a_time] = eon_a_value
+
+        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        total_rows = self.get_states(sensor, extra_parameter)
+        eon_sum_value = eon_report_value + eon_a_value
+        eon_sum_value = round(eon_sum_value, 5)
+        eon_report[eon_report_time] = eon_sum_value
+        eon_a_total[eon_a_time] = eon_sum_value
+        if len(total_rows) == 0 and eon_sum_value > 0:
+            self.set_state(eon_sensor, state = eon_sum_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": total_friendly_name, "device_class": "energy"})
+        
+        a_rows = self.get_states(a_energy, extra_parameter)            
+        if len(a_rows) == 0:
+            self.set_state(a_energy, state = eon_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": friendly_name, "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "device_class": "power"})   
+        
+        return eon_sum_value
+        
 
     def get_report_data(self, profile_data_url, session):
-        jsonResponse = self.get_data(profile_data_url, session, self.args['report_id'], 2)
+        jsonResponse = self.get_data(profile_data_url, session, self.args['report_id'], 4, None, None)
         sensor_1_8_0_sensor = self.args['1_8_0_sensor']
         sensor_2_8_0_sensor = self.args['2_8_0_sensor']
         try:
-            eon_1_8_0 = {}
             eon_1_8_0_report = {}
             self.log(jsonResponse[0]['data'])
             for eon_1_8_0_data in jsonResponse[0]['data']:
-                eon_1_8_0_value = round(eon_1_8_0_data['value'], 2)
-                eon_1_8_0_time = datetime.datetime.strptime(eon_1_8_0_data['time'], '%Y-%m-%dT%H:%M:%S')
-                extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_1_8_0_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-                rows = self.get_states(sensor_1_8_0_sensor, extra_parameter)
-                eon_1_8_0_report[eon_1_8_0_time] = eon_1_8_0_value
-                if len(rows) == 0 and eon_1_8_0_value > 0:
-                    self.set_state(sensor_1_8_0_sensor, state = eon_1_8_0_value, unit_of_measurement = 'kWh', attributes = { "state_class": "measurement", "last_reset": self.args['last_reset'], "last_changed": eon_1_8_0_time, "unit_of_measurement": 'kWh', "friendly_name": "EON import energy total", "device_class": "energy"})
+                self.collect_daily_data(eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
             if len(eon_1_8_0_report) > 0:
                 eon_1_8_0_report = {key:val for key, val in eon_1_8_0_report.items() if val != 0}
                 self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_1_8_0_report)
 
-            eon_2_8_0 = {}
             eon_2_8_0_report = {}
             self.log(jsonResponse[1]['data'])
             for eon_2_8_0_data in jsonResponse[1]['data']:
-                eon_2_8_0_value = round(eon_2_8_0_data['value'], 2)
-                eon_2_8_0_time = datetime.datetime.strptime(eon_2_8_0_data['time'], '%Y-%m-%dT%H:%M:%S')
-                extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_1_8_0_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-                rows = self.get_states(sensor_2_8_0_sensor, extra_parameter)
-                eon_2_8_0_report[eon_2_8_0_time] = eon_2_8_0_value
-                if len(rows) == 0 and eon_2_8_0_value > 0:
-                    self.set_state(sensor_2_8_0_sensor, state = eon_2_8_0_value, unit_of_measurement = 'kWh', attributes = { "state_class": "measurement", "last_reset": self.args['last_reset'], "last_changed": eon_2_8_0_time, "unit_of_measurement": 'kWh', "friendly_name": "EON export energy total", "device_class": "energy"})
+                self.collect_daily_data(eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
 
             if len(eon_2_8_0_report) > 0:
                 eon_2_8_0_report = {key:val for key, val in eon_2_8_0_report.items() if val != 0}
@@ -150,17 +141,30 @@ class Eon(hass.Hass):
 
         return eon_1_8_0_report, eon_2_8_0_report
 
+
+    def collect_daily_data(self, eon_data, eon_sensor, eon_report, friendly_name):
+        eon_value = round(eon_data['value'], 5)
+        eon_time = datetime.datetime.strptime(eon_data['time'], '%Y-%m-%dT%H:%M:%S').astimezone(tz=datetime.timezone.utc)
+        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        rows = self.get_states(eon_sensor, extra_parameter)
+        eon_report[eon_time] = eon_value
+        if len(rows) == 0 and eon_value > 0:
+            self.set_state(eon_sensor, state = eon_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": friendly_name, "device_class": "energy"})
+            print(eon_sensor + ": value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
+
     def get_value_from_datetime_dict(self, dict, findable_date):
         for k,v in dict.items():
             if k.date() == findable_date.date():
                 return k, v
         return None, None
 
-    def get_data(self, profile_data_url, session, id, per_page_number):
+    def get_data(self, profile_data_url, session, id, per_page_number, since, until):
         hyphen = self.args['hyphen']
         offset = int(self.args['offset'])
-        since = (datetime.datetime.now() + datetime.timedelta(days=-1 + offset)).strftime('%Y-%m-%d')
-        until = (datetime.datetime.now() + datetime.timedelta(days=offset)).strftime('%Y-%m-%dT23:00:00.000Z')
+        if not since:
+            since = (datetime.datetime.now() + datetime.timedelta(days=-1 + offset)).strftime('%Y-%m-%d')
+        if not until:            
+            until = (datetime.datetime.now() + datetime.timedelta(days=offset)).strftime('%Y-%m-%dT23:00:00.000Z')
         params = {
                 "page": 1,
                 "perPage": per_page_number,
