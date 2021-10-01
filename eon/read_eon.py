@@ -12,7 +12,7 @@ class Eon(hass.Hass):
         every_hour = self.args['every_hour']
         # time = datetime.time(0, 0, 0)
         self.run_every(self.read_data, "now", every_hour * (60*60))
-        # self.run_minutely(self.read_data, time)
+
 
     def get_verificationtoken(self, content):
         try:
@@ -31,7 +31,6 @@ class Eon(hass.Hass):
         messages = []
 
         self.log("Starting E.ON reader")
-        # self.set_namespace("hass")
 
         try:
             session = self.login(account_url, username, password)
@@ -60,7 +59,7 @@ class Eon(hass.Hass):
             eon_sum_value = eon_daily_value
             for positive_a in jsonResponse[0]['data']:
                 eon_sum_value = self.collect_chart_data(positive_a, positive_a_energy, eon_positive_a, sensor_1_8_0_sensor, eon_1_8_0_report, eon_positive_a_total, eon_daily_time, eon_sum_value, sensor_1_8_0_sensor, "EON +A energy power", "EON consumption energy total")
-        
+
             if len(eon_positive_a_total) > 0:
                 time.sleep(5)
                 eon_positive_a_total = {key:val for key, val in eon_positive_a_total.items() if val != 0}
@@ -84,12 +83,10 @@ class Eon(hass.Hass):
                 eon_sum_value = self.collect_chart_data(negative_a, negative_a_energy, eon_negative_a, sensor_2_8_0_sensor, eon_2_8_0_report, eon_negative_a_total, eon_daily_time, eon_sum_value, sensor_2_8_0_sensor, "EON -A energy power", "EON export energy total")
 
             if len(eon_negative_a_total) > 0:
-                time.sleep(5)
                 eon_negative_a_total = {key:val for key, val in eon_negative_a_total.items() if val != 0}
                 self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_negative_a_total)
 
             if len(eon_negative_a) > 0:
-                time.sleep(5)
                 self.normalize_eon_chart_data('sensor.eon_negative_a_energy_power', eon_negative_a)
 
     def collect_chart_data(self, a, a_energy, eon_a, sensor, eon_report, eon_a_total, eon_report_time, eon_report_value, eon_sensor, friendly_name, total_friendly_name):
@@ -106,13 +103,13 @@ class Eon(hass.Hass):
         eon_a_total[eon_a_time] = eon_sum_value
         if len(total_rows) == 0 and eon_sum_value > 0:
             self.set_state(eon_sensor, state = eon_sum_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": total_friendly_name, "device_class": "energy"})
-        
-        a_rows = self.get_states(a_energy, extra_parameter)            
+
+        a_rows = self.get_states(a_energy, extra_parameter)
         if len(a_rows) == 0:
-            self.set_state(a_energy, state = eon_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": friendly_name, "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "device_class": "power"})   
-        
+            self.set_state(a_energy, state = eon_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": friendly_name, "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "device_class": "power"})
+
         return eon_sum_value
-        
+
 
     def get_report_data(self, profile_data_url, session):
         jsonResponse = self.get_data(profile_data_url, session, self.args['report_id'], 4, None, None)
@@ -120,7 +117,7 @@ class Eon(hass.Hass):
         sensor_2_8_0_sensor = self.args['2_8_0_sensor']
         try:
             eon_1_8_0_report = {}
-            self.log(jsonResponse[0]['data'])
+            # self.log(jsonResponse[0]['data'])
             for eon_1_8_0_data in jsonResponse[0]['data']:
                 self.collect_daily_data(eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
@@ -129,7 +126,7 @@ class Eon(hass.Hass):
                 self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_1_8_0_report)
 
             eon_2_8_0_report = {}
-            self.log(jsonResponse[1]['data'])
+            # self.log(jsonResponse[1]['data'])
             for eon_2_8_0_data in jsonResponse[1]['data']:
                 self.collect_daily_data(eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
 
@@ -152,19 +149,14 @@ class Eon(hass.Hass):
             self.set_state(eon_sensor, state = eon_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": friendly_name, "device_class": "energy"})
             print(eon_sensor + ": value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
 
-    def get_value_from_datetime_dict(self, dict, findable_date):
-        for k,v in dict.items():
-            if k.date() == findable_date.date():
-                return k, v
-        return None, None
 
     def get_data(self, profile_data_url, session, id, per_page_number, since, until):
         hyphen = self.args['hyphen']
         offset = int(self.args['offset'])
         if not since:
             since = (datetime.datetime.now() + datetime.timedelta(days=-1 + offset)).strftime('%Y-%m-%d')
-        if not until:            
-            until = (datetime.datetime.now() + datetime.timedelta(days=offset)).strftime('%Y-%m-%dT23:00:00.000Z')
+        if not until:
+            until = (datetime.datetime.now()).strftime('%Y-%m-%dT23:00:00.000Z')
         params = {
                 "page": 1,
                 "perPage": per_page_number,
@@ -176,6 +168,7 @@ class Eon(hass.Hass):
         data_content = session.get(profile_data_url, params=params)
         jsonResponse = data_content.json()
         return jsonResponse
+
 
     def login(self, account_url, username, password):
         session = requests.Session()
@@ -212,15 +205,7 @@ class Eon(hass.Hass):
             print("END - normalize_eon_chart_data")
 
 
-    def is_number(self, s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            return False
-
     def set_timestamp_and_state(self, eon_type, eon_time, eon_value, state_id, event_id):
-        # self.log("%s - set_timestamp: %s - %s", eon_type, eon_time, state_id)
         connection = pymysql.connect(host=self.args['host'],
                                     user=self.args['username_db'],
                                     password=self.args['password_db'],
@@ -258,9 +243,7 @@ class Eon(hass.Hass):
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         try:
-            # eon_formatted_date = (datetime.datetime.now() + datetime.timedelta(days=-1 + offset)).strftime('%Y-%m-%d %H:%M:%S')
             with connection.cursor() as cursor:
-                # Read a single record
                 sql = """SELECT state_id, entity_id, state, created, event_id FROM states WHERE entity_id = %s"""
                 if extra_parameter:
                     sql += extra_parameter
