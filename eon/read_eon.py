@@ -134,7 +134,7 @@ class Eon(hass.Hass):
                 eon_2_8_0_report = {key:val for key, val in eon_2_8_0_report.items() if val != 0}
                 self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_2_8_0_report)
         except Exception as ex:
-            print(datetime.datetime.now(), "Error get_report_data {0}.".format(str(ex)))
+            self.log(datetime.datetime.now(), "Error get_report_data {0}.".format(str(ex)))
 
         return eon_1_8_0_report, eon_2_8_0_report
 
@@ -147,7 +147,7 @@ class Eon(hass.Hass):
         eon_report[eon_time] = eon_value
         if len(rows) == 0 and eon_value > 0:
             self.set_state(eon_sensor, state = eon_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": friendly_name, "device_class": "energy"})
-            print(eon_sensor + ": value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
+            # self.log(eon_sensor + ": value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
 
 
     def get_data(self, profile_data_url, session, id, per_page_number, since, until):
@@ -172,7 +172,7 @@ class Eon(hass.Hass):
 
     def login(self, account_url, username, password):
         session = requests.Session()
-        content = session.get(account_url)
+        content = session.get(account_url, verify = False)
         index_content = BeautifulSoup(content.content, "html.parser")
         request_verification_token = self.get_verificationtoken(index_content)
 
@@ -183,7 +183,7 @@ class Eon(hass.Hass):
             }
 
         header = {"Content-Type": "application/x-www-form-urlencoded"}
-        content = session.post(account_url, data=payload, headers=header)
+        content = session.post(account_url, data=payload, headers=header, verify = False)
         return session
 
 
@@ -200,9 +200,9 @@ class Eon(hass.Hass):
                     self.set_timestamp_and_state(eon_type, eon_time, eon_value, state_id, event_id)
 
         except Exception as ex:
-            print(datetime.datetime.now(), "Error normalize_eon_chart_data {0}.".format(str(ex)))
+            self.log(datetime.datetime.now(), "Error normalize_eon_chart_data {0}.".format(str(ex)))
         finally:
-            print("END - normalize_eon_chart_data")
+            self.log("END - normalize_eon_chart_data")
 
 
     def set_timestamp_and_state(self, eon_type, eon_time, eon_value, state_id, event_id):
