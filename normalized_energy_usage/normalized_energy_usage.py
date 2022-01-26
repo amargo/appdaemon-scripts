@@ -242,7 +242,7 @@ class NormalizedEnergyUsage(hass.Hass):
             with connection.cursor() as cursor:
                 sql = ( "SELECT s.id as statistic_id, s.created as created, s.`start` as start_date, s.state as state, s.sum as sum_state, sm.statistic_id as statistic_id, fixed.state as fixed_state FROM statistics s "
                         "join statistics_meta sm on s.metadata_id = sm.id "
-                        "join states fixed on fixed.entity_id = sm.statistic_id AND fixed.created = s.`start` "
+                        "join states fixed on fixed.entity_id = sm.statistic_id AND fixed.created = DATE_ADD(s.`start`, INTERVAL 1 DAY_HOUR) "
                         "WHERE sm.statistic_id = %s "
                         "AND s.`start` between %s and %s "
                         "ORDER BY `start`;")
