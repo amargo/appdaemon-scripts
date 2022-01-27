@@ -32,10 +32,10 @@ Eon:
   every_hour: 1
   hyphen: '<->'
   offset: -2
-  host: '<database connection host>'
-  username_db: '<username_db>'
-  password_db: '<password_db>'
-  database: '<database name>'
+  host: <database connection host>
+  username_db: <username_db>
+  password_db: <password_db>
+  database: <database name>
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
 ```
@@ -47,11 +47,12 @@ Are explained [here](normalized_energy_usage/README.md)
 normalized_energy_usage:
   class: NormalizedEnergyUsage
   module: normalized_energy_usage
-  host: '<database connection host>'
-  username_db: '<username_db>'
-  password_db: '<password_db>'
-  database: '<database name>'
+  host: <database connection host>
+  username: <username_db>
+  password: <password_db>
+  database: <database name>
   offset: -2
+  numdays: 4
   every_hour: 1
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
