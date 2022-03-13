@@ -172,7 +172,7 @@ class Eon(hass.Hass):
 
     def login(self, account_url, username, password):
         session = requests.Session()
-        content = session.get(account_url, verify = False)
+        content = session.get(account_url, verify = True)
         index_content = BeautifulSoup(content.content, "html.parser")
         request_verification_token = self.get_verificationtoken(index_content)
 
@@ -183,7 +183,7 @@ class Eon(hass.Hass):
             }
 
         header = {"Content-Type": "application/x-www-form-urlencoded"}
-        content = session.post(account_url, data=payload, headers=header, verify = False)
+        content = session.post(account_url, data=payload, headers=header, verify = True)
         return session
 
 
@@ -247,7 +247,9 @@ class Eon(hass.Hass):
                 sql = """SELECT state_id, entity_id, state, created, event_id FROM states WHERE entity_id = %s"""
                 if extra_parameter:
                     sql += extra_parameter
-                cursor.execute(sql, (eon_type))
+                
+                input = (eon_type)
+                cursor.execute(sql, input)
                 rows = cursor.fetchall()
         finally:
             connection.close()
