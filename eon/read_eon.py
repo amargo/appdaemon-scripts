@@ -1,4 +1,4 @@
-import hassapi as hass
+import appdaemon.plugins.hass.hassapi as hass
 import json
 import requests
 from bs4 import BeautifulSoup
@@ -87,25 +87,27 @@ class Eon(hass.Hass):
                 self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_negative_a_total)
 
             if len(eon_negative_a) > 0:
-                self.normalize_eon_chart_data('sensor.eon_negative_a_energy_power', eon_negative_a)
+                self.normalize_eon_chart_data(negative_a_energy, eon_negative_a)
 
     def collect_chart_data(self, a, a_energy, eon_a, sensor, eon_report, eon_a_total, eon_report_time, eon_report_value, eon_sensor, friendly_name, total_friendly_name):
         eon_a_value = round(a['value'], 5)
         eon_a_time = datetime.datetime.strptime(a['time'], '%Y-%m-%dT%H:%M:%S').astimezone(tz=datetime.timezone.utc)
-        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
         eon_a[eon_a_time] = eon_a_value
 
-        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_a_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
         total_rows = self.get_states(sensor, extra_parameter)
         eon_sum_value = eon_report_value + eon_a_value
         eon_sum_value = round(eon_sum_value, 5)
         eon_report[eon_report_time] = eon_sum_value
         eon_a_total[eon_a_time] = eon_sum_value
         if len(total_rows) == 0 and eon_sum_value > 0:
+            # self.log(eon_sensor + ": eon_sum_value is " + str(eon_sum_value) + ", eon_time: " + eon_a_time.strftime('%Y-%m-%d %H:%M:%S'))
             self.set_state(eon_sensor, state = eon_sum_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": total_friendly_name, "device_class": "energy"})
 
         a_rows = self.get_states(a_energy, extra_parameter)
         if len(a_rows) == 0:
+            # self.log(a_energy + ": eon_a_value is " + str(eon_sum_value) + ", eon_time: " + eon_a_time.strftime('%Y-%m-%d %H:%M:%S'))
             self.set_state(a_energy, state = eon_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": friendly_name, "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "device_class": "power"})
 
         return eon_sum_value
@@ -117,7 +119,7 @@ class Eon(hass.Hass):
         sensor_2_8_0_sensor = self.args['2_8_0_sensor']
         try:
             eon_1_8_0_report = {}
-            # self.log(jsonResponse[0]['data'])
+            self.log(jsonResponse[0]['data'])
             for eon_1_8_0_data in jsonResponse[0]['data']:
                 self.collect_daily_data(eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
@@ -126,7 +128,7 @@ class Eon(hass.Hass):
                 self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_1_8_0_report)
 
             eon_2_8_0_report = {}
-            # self.log(jsonResponse[1]['data'])
+            self.log(jsonResponse[1]['data'])
             for eon_2_8_0_data in jsonResponse[1]['data']:
                 self.collect_daily_data(eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
 
@@ -142,12 +144,12 @@ class Eon(hass.Hass):
     def collect_daily_data(self, eon_data, eon_sensor, eon_report, friendly_name):
         eon_value = round(eon_data['value'], 5)
         eon_time = datetime.datetime.strptime(eon_data['time'], '%Y-%m-%dT%H:%M:%S').astimezone(tz=datetime.timezone.utc)
-        extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+        extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
         rows = self.get_states(eon_sensor, extra_parameter)
         eon_report[eon_time] = eon_value
         if len(rows) == 0 and eon_value > 0:
             self.set_state(eon_sensor, state = eon_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": friendly_name, "device_class": "energy"})
-            # self.log(eon_sensor + ": value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
+            # self.log(eon_sensor + ": eon_value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
 
 
     def get_data(self, profile_data_url, session, id, per_page_number, since, until):
@@ -191,7 +193,7 @@ class Eon(hass.Hass):
         self.log("normalize_eon_chart_data - %s, %s", eon_type, data)
         try:
             for eon_time, eon_value in data.items():
-                extra_parameter = " AND JSON_CONTAINS(attributes, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+                extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
                 rows = self.get_states(eon_type, extra_parameter)
                 for row in rows:
                     event_id = row['event_id']
@@ -244,12 +246,12 @@ class Eon(hass.Hass):
                                     cursorclass=pymysql.cursors.DictCursor)
         try:
             with connection.cursor() as cursor:
-                sql = """SELECT state_id, entity_id, state, created, event_id FROM states WHERE entity_id = %s"""
+                sql = ( "SELECT state_id, entity_id, state, created, event_id FROM states s "
+                        "JOIN state_attributes sa on s.attributes_id = sa.attributes_id "
+                        "WHERE entity_id = %s " )
                 if extra_parameter:
                     sql += extra_parameter
-                
-                input = (eon_type)
-                cursor.execute(sql, input)
+                cursor.execute(sql, (eon_type))
                 rows = cursor.fetchall()
         finally:
             connection.close()
