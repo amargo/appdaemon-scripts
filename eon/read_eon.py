@@ -174,7 +174,7 @@ class Eon(hass.Hass):
 
     def login(self, account_url, username, password):
         session = requests.Session()
-        content = session.get(account_url, verify = True)
+        content = session.get(account_url, verify = False)
         index_content = BeautifulSoup(content.content, "html.parser")
         request_verification_token = self.get_verificationtoken(index_content)
 
@@ -185,7 +185,7 @@ class Eon(hass.Hass):
             }
 
         header = {"Content-Type": "application/x-www-form-urlencoded"}
-        content = session.post(account_url, data=payload, headers=header, verify = True)
+        content = session.post(account_url, data=payload, headers=header, verify = False)
         return session
 
 
