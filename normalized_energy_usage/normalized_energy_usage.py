@@ -11,50 +11,39 @@ class NormalizedEnergyUsage(hass.Hass):
 
 
     def setup(self, kwargs):
-        self.log("Normalizing energy usage")
-        try:
+        self.log("Normalizing energy usage", level="INFO")
+        numdays = self.args["numdays"]
+        base = datetime.datetime.today()
+        date_list = [base - datetime.timedelta(days=x) for x in range(numdays)]
+        date_list.reverse()
 
-            numdays = self.args["numdays"]
-            base = datetime.datetime.today()
-            date_list = [base - datetime.timedelta(days=x) for x in range(numdays)]
-            date_list.reverse()
+        for idx, date in enumerate(date_list):
+            if idx != len(date_list) -1:
+                self.fix_statistics_data(self.args["1_8_0_sensor"], date.date())
+                self.fix_statistics_data(self.args["2_8_0_sensor"], date.date())
+            self.normalize_data(self.args["1_8_0_sensor"], date.date())
+            self.normalize_data(self.args["2_8_0_sensor"], date.date())
 
-            for idx, date in enumerate(date_list):
-                if idx != len(date_list) -1:
-                    self.fix_statistics_data(self.args["1_8_0_sensor"], date.date())
-                    self.fix_statistics_data(self.args["2_8_0_sensor"], date.date())
-                self.normalize_data(self.args["1_8_0_sensor"], date.date())
-                self.normalize_data(self.args["2_8_0_sensor"], date.date())
-
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error retrive data from {0}.".format(str(ex)))
-        finally:
-            self.log("END - Normalizing energy usage")
 
     def fix_statistics_data(self, eon_type, date):
-        try:
-            rows = self.get_statistics_by_date(eon_type, date)
-            metadata = self.get_metadata_id(eon_type)
-            metadata_id = metadata["id"]
+        rows = self.get_statistics_by_date(eon_type, date)
+        metadata = self.get_metadata_id(eon_type)
+        metadata_id = metadata["id"]
 
-            number_of_hours = 24
-            if date == (datetime.datetime.today() - datetime.timedelta(days=1)).date():
-                number_of_hours = 20
+        number_of_hours = 24
+        if date == (datetime.datetime.today() - datetime.timedelta(days=1)).date():
+            number_of_hours = 20
 
-            hours = [number_of_hour["start_date"].hour for number_of_hour in rows]
-            missing_hours = [x for x in range(0, number_of_hours) if not x in hours]
-            for missing_stat in missing_hours:
-                start_datetime = datetime.datetime.combine(date, datetime.datetime.min.time())
-                start_datetime = start_datetime + datetime.timedelta(hours=missing_stat)
-                self.log("Generate missing datetime: {0}".format(str(start_datetime)))
-                existing_datetime = self.get_statistics_by_datetime(eon_type, start_datetime)
-                if len(existing_datetime) == 0:
-                    self.set_dummy_value_to_statistics(metadata_id, start_datetime)
+        hours = [number_of_hour["start_date"].hour for number_of_hour in rows]
+        missing_hours = [x for x in range(0, number_of_hours) if not x in hours]
+        for missing_stat in missing_hours:
+            start_datetime = datetime.datetime.combine(date, datetime.datetime.min.time())
+            start_datetime = start_datetime + datetime.timedelta(hours=missing_stat)
+            self.log(f"Generate missing datetime: {str(start_datetime)}", level="INFO")
+            existing_datetime = self.get_statistics_by_datetime(eon_type, start_datetime)
+            if len(existing_datetime) == 0:
+                self.set_dummy_value_to_statistics(metadata_id, start_datetime)
 
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
-        finally:
-            self.log("END - fix_statistics_data")
 
     def get_statistics_by_datetime(self, eon_type, date):
         connection = pymysql.connect(host=self.args['host'],
@@ -76,11 +65,12 @@ class NormalizedEnergyUsage(hass.Hass):
 
                 cursor.execute(sql, (eon_type, date_tmp))
                 rows = cursor.fetchall()
-        except Exception as ex:
-            print(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"get_statistics_by_date: {err.message}")
         finally:
             connection.close()
             return rows
+
 
     def get_statistics_by_date(self, eon_type, date):
         connection = pymysql.connect(host=self.args['host'],
@@ -100,8 +90,8 @@ class NormalizedEnergyUsage(hass.Hass):
 
                 cursor.execute(sql, (eon_type, date.strftime('%Y-%m-%d 00:00:00')))
                 rows = cursor.fetchall()
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"get_statistics_by_date: {err.message}", level="ERROR")
         finally:
             connection.close()
             return rows
@@ -121,8 +111,8 @@ class NormalizedEnergyUsage(hass.Hass):
 
                 cursor.execute(sql, eon_type)
                 row = cursor.fetchone()
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"get_metadata_id: {err.message}", level="ERROR")
         finally:
             connection.close()
             return row
@@ -152,29 +142,23 @@ class NormalizedEnergyUsage(hass.Hass):
 
                 cursor.execute(sql, (created_date, int(metadata_id), start_date, last_reset))
                 connection.commit()
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"set_dummy_value_to_statistics: {err.message}", level="ERROR")
         finally:
             connection.close()
 
     def normalize_data(self, eon_type, date):
-        try:
-            rows = self.get_states(eon_type, date)
-            first_state = self.get_first_state(eon_type)
-            first_state_value = round(float(first_state['state']), 3)
+        rows = self.get_states(eon_type, date)
+        first_state = self.get_first_state(eon_type)
+        first_state_value = round(float(first_state['state']), 3)
 
-            for idx, row in enumerate(rows):
-                fixed_state = round(float(row['fixed_state']), 3)
-                row['state'] = fixed_state
-                sum_state = fixed_state - first_state_value
-                row['sum_state'] = round(sum_state, 3)
-                self.set_sum_and_state(eon_type, row['statistic_id'], row['sum_state'], fixed_state, row['start_date'])
+        for idx, row in enumerate(rows):
+            fixed_state = round(float(row['fixed_state']), 3)
+            row['state'] = fixed_state
+            sum_state = fixed_state - first_state_value
+            row['sum_state'] = round(sum_state, 3)
+            self.set_sum_and_state(eon_type, row['statistic_id'], row['sum_state'], fixed_state, row['start_date'])
 
-        except Exception as ex:
-            self.log("ERROR - normalize_data")
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
-        finally:
-            self.log("END - normalize_data")
 
     def get_first_state(self, eon_type):
         connection = pymysql.connect(host=self.args['host'],
@@ -194,9 +178,8 @@ class NormalizedEnergyUsage(hass.Hass):
                 input = (eon_type)
                 cursor.execute(sql, input)
                 row = cursor.fetchone()
-        except Exception as ex:
-            print("ERROR - get_first_state")
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"ERROR - get_first_state: {err.message}", level="ERROR")
         finally:
             connection.close()
             return row
@@ -210,15 +193,14 @@ class NormalizedEnergyUsage(hass.Hass):
                                     charset='utf8mb4',
                                     cursorclass=pymysql.cursors.DictCursor)
         try:
-            self.log("{0} - {4} set_sum_and_state: {1} - {2} - {3}".format(eon_type, statistic_id, str(sum_state), str(state), start_date.strftime('%Y-%m-%d %H:%M')))
+            self.log(f"{eon_type} - {statistic_id} set_sum_and_state: {str(sum_state)} - {str(state)} - {start_date.strftime('%Y-%m-%d %H:%M')}", level="INFO")
             with connection.cursor() as cursor:
                 sql = """UPDATE statistics SET sum = %s, state = %s WHERE id = %s"""
                 input = (sum_state, state, statistic_id)
                 cursor.execute(sql, input)
                 connection.commit()
-        except Exception as ex:
-            self.log("ERROR - set_sum_and_state")
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"ERROR - set_sum_and_state: {err.message}", level="ERROR")
         finally:
             connection.close()
 
@@ -249,9 +231,8 @@ class NormalizedEnergyUsage(hass.Hass):
 
                 cursor.execute(sql, (eon_type, final_since, final_until))
                 rows = cursor.fetchall()
-        except Exception as ex:
-            self.log("ERROR - get_states")
-            self.log(datetime.datetime.now(), "Error {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"ERROR - get_states: {err.message}", level="ERROR")
         finally:
             connection.close()
             return rows

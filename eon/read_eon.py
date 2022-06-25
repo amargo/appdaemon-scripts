@@ -15,12 +15,9 @@ class Eon(hass.Hass):
 
 
     def get_verificationtoken(self, content):
-        try:
-            self.log("get verification token from E.ON portal")
-            toke = content.find('input', {'name': '__RequestVerificationToken'})
-            return toke.get('value')
-        except Exception as ex:
-            self.log("Unable to get verification token." + str(ex) + ", content: " + str(content))
+        self.log("get verification token from E.ON portal", level="INFO")
+        toke = content.find('input', {'name': '__RequestVerificationToken'})
+        return toke.get('value')
 
 
     def read_data(self, kwargs):
@@ -30,15 +27,13 @@ class Eon(hass.Hass):
         password = self.args['password']
         messages = []
 
-        self.log("Starting E.ON reader")
+        self.log("Starting E.ON reader", level="INFO")
+        session = self.login(account_url, username, password)
+        self.log("Start receiving data", level="INFO")
+        eon_1_8_0_report, eon_2_8_0_report = self.get_report_data(profile_data_url, session)
+        self.get_chart_data(profile_data_url, session, eon_1_8_0_report, eon_2_8_0_report)
+        self.log("END processing data", level="INFO")
 
-        try:
-            session = self.login(account_url, username, password)
-            eon_1_8_0_report, eon_2_8_0_report = self.get_report_data(profile_data_url, session)
-            self.get_chart_data(profile_data_url, session, eon_1_8_0_report, eon_2_8_0_report)
-
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error retrive data from {0}.".format(str(ex)))
 
     def get_chart_data(self, profile_data_url, session, eon_1_8_0_report, eon_2_8_0_report):
         sensor_1_8_0_sensor = self.args['1_8_0_sensor']
@@ -102,12 +97,12 @@ class Eon(hass.Hass):
         eon_report[eon_report_time] = eon_sum_value
         eon_a_total[eon_a_time] = eon_sum_value
         if len(total_rows) == 0 and eon_sum_value > 0:
-            # self.log(eon_sensor + ": eon_sum_value is " + str(eon_sum_value) + ", eon_time: " + eon_a_time.strftime('%Y-%m-%d %H:%M:%S'))
             self.set_state(eon_sensor, state = eon_sum_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": total_friendly_name, "device_class": "energy"})
+            self.log(f"{eon_sensor}: eon_sum_value is {str(eon_sum_value)}, eon_time: {eon_a_time.strftime('%Y-%m-%d %H:%M:%S')}", level="DEBUG")
 
         a_rows = self.get_states(a_energy, extra_parameter)
         if len(a_rows) == 0:
-            # self.log(a_energy + ": eon_a_value is " + str(eon_sum_value) + ", eon_time: " + eon_a_time.strftime('%Y-%m-%d %H:%M:%S'))
+            self.log(f"{a_energy}: eon_a_value is {str(eon_sum_value)}, eon_time: {eon_a_time.strftime('%Y-%m-%d %H:%M:%S')}", level="DEBUG")
             self.set_state(a_energy, state = eon_a_value, unit_of_measurement = 'kWh', attributes = { "friendly_name": friendly_name, "last_changed": eon_a_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "device_class": "power"})
 
         return eon_sum_value
@@ -115,28 +110,27 @@ class Eon(hass.Hass):
 
     def get_report_data(self, profile_data_url, session):
         jsonResponse = self.get_data(profile_data_url, session, self.args['report_id'], 4, None, None)
+        self.log(jsonResponse, level="DEBUG", ascii_encode=False)
         sensor_1_8_0_sensor = self.args['1_8_0_sensor']
         sensor_2_8_0_sensor = self.args['2_8_0_sensor']
-        try:
-            eon_1_8_0_report = {}
-            self.log(jsonResponse[0]['data'])
-            for eon_1_8_0_data in jsonResponse[0]['data']:
-                self.collect_daily_data(eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
-            if len(eon_1_8_0_report) > 0:
-                eon_1_8_0_report = {key:val for key, val in eon_1_8_0_report.items() if val != 0}
-                self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_1_8_0_report)
+        eon_1_8_0_report = {}
+        self.log(jsonResponse[0]['data'], level="DEBUG", ascii_encode=False)
+        for eon_1_8_0_data in jsonResponse[0]['data']:
+            self.collect_daily_data(eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
-            eon_2_8_0_report = {}
-            self.log(jsonResponse[1]['data'])
-            for eon_2_8_0_data in jsonResponse[1]['data']:
-                self.collect_daily_data(eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
+        if len(eon_1_8_0_report) > 0:
+            eon_1_8_0_report = {key:val for key, val in eon_1_8_0_report.items() if val != 0}
+            self.normalize_eon_chart_data(sensor_1_8_0_sensor, eon_1_8_0_report)
 
-            if len(eon_2_8_0_report) > 0:
-                eon_2_8_0_report = {key:val for key, val in eon_2_8_0_report.items() if val != 0}
-                self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_2_8_0_report)
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error get_report_data {0}.".format(str(ex)))
+        eon_2_8_0_report = {}
+        self.log(jsonResponse[1]['data'], level="DEBUG", ascii_encode=False)
+        for eon_2_8_0_data in jsonResponse[1]['data']:
+            self.collect_daily_data(eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
+
+        if len(eon_2_8_0_report) > 0:
+            eon_2_8_0_report = {key:val for key, val in eon_2_8_0_report.items() if val != 0}
+            self.normalize_eon_chart_data(sensor_2_8_0_sensor, eon_2_8_0_report)
 
         return eon_1_8_0_report, eon_2_8_0_report
 
@@ -149,7 +143,7 @@ class Eon(hass.Hass):
         eon_report[eon_time] = eon_value
         if len(rows) == 0 and eon_value > 0:
             self.set_state(eon_sensor, state = eon_value, unit_of_measurement = 'kWh', attributes = { "state_class": "total_increasing", "last_reset": self.args['last_reset'], "last_changed": eon_time.strftime('%Y-%m-%d %H:%M:%S'), "unit_of_measurement": 'kWh', "friendly_name": friendly_name, "device_class": "energy"})
-            # self.log(eon_sensor + ": eon_value is " + str(eon_value) + ", eon_time: " + eon_time.strftime('%Y-%m-%d %H:%M:%S'))
+            self.log(f"{eon_sensor}: eon_value is {str(eon_value)}, eon_time: {eon_time.strftime('%Y-%m-%d %H:%M:%S')}", level="DEBUG")
 
 
     def get_data(self, profile_data_url, session, id, per_page_number, since, until):
@@ -190,21 +184,17 @@ class Eon(hass.Hass):
 
 
     def normalize_eon_chart_data(self, eon_type, data):
-        self.log("normalize_eon_chart_data - %s, %s", eon_type, data)
-        try:
-            for eon_time, eon_value in data.items():
-                extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
-                rows = self.get_states(eon_type, extra_parameter)
-                for row in rows:
-                    event_id = row['event_id']
-                    state = row['state']
-                    state_id = row['state_id']
-                    self.set_timestamp_and_state(eon_type, eon_time, eon_value, state_id, event_id)
+        self.log(f"normalize_eon_chart_data - '{eon_type}', '{data}'", level="DEBUG")
+        for eon_time, eon_value in data.items():
+            extra_parameter = " AND JSON_CONTAINS(sa.shared_attrs, '\"" + eon_time.strftime('%Y-%m-%d %H:%M:%S') + "\"', '$.last_changed')"
+            rows = self.get_states(eon_type, extra_parameter)
+            for row in rows:
+                event_id = row['event_id']
+                state = row['state']
+                state_id = row['state_id']
+                self.set_timestamp_and_state(eon_type, eon_time, eon_value, state_id, event_id)
 
-        except Exception as ex:
-            self.log(datetime.datetime.now(), "Error normalize_eon_chart_data {0}.".format(str(ex)))
-        finally:
-            self.log("END - normalize_eon_chart_data")
+        self.log("END - normalize_eon_chart_data", level="DEBUG")
 
 
     def set_timestamp_and_state(self, eon_type, eon_time, eon_value, state_id, event_id):
@@ -227,9 +217,8 @@ class Eon(hass.Hass):
                 input = (eon_formatted_date, eon_formatted_date, event_id)
                 cursor.execute(sql, input)
                 connection.commit()
-        except Exception as ex:
-            self.log("ERROR - set_timestamp - %s", state_id)
-            self.log(datetime.datetime.now(), "Error set_timestamp {0}.".format(str(ex)))
+        except Exception as err:
+            self.log(f"Error - set_timestamp: {err.message}", level="ERROR")
         finally:
             connection.close()
 
@@ -237,7 +226,7 @@ class Eon(hass.Hass):
     def get_states(self, eon_type, extra_parameter):
         offset = int(self.args['offset'])
         # Connect to the database
-        # self.log("Connect to the database - get_states - %s", extra_parameter)
+        self.log(f"Connect to the database - get_states - {extra_parameter}", level="DEBUG")
         connection = pymysql.connect(host=self.args['host'],
                                     user=self.args['username_db'],
                                     password=self.args['password_db'],
@@ -253,6 +242,9 @@ class Eon(hass.Hass):
                     sql += extra_parameter
                 cursor.execute(sql, (eon_type))
                 rows = cursor.fetchall()
+                self.log(f"rows - get_states {rows}.", level="DEBUG")
+        except Exception as err:
+            self.log(f"Error - get_states: {err.message}", level="ERROR")
         finally:
             connection.close()
             return rows
