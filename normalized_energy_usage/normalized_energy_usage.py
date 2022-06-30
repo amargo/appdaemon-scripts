@@ -66,7 +66,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, (eon_type, date_tmp))
                 rows = cursor.fetchall()
         except Exception as err:
-            self.log(f"get_statistics_by_date: {err.message}")
+            self.log(f"get_statistics_by_date: {err}")
         finally:
             connection.close()
             return rows
@@ -91,7 +91,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, (eon_type, date.strftime('%Y-%m-%d 00:00:00')))
                 rows = cursor.fetchall()
         except Exception as err:
-            self.log(f"get_statistics_by_date: {err.message}", level="ERROR")
+            self.log(f"get_statistics_by_date: {err}", level="ERROR")
         finally:
             connection.close()
             return rows
@@ -112,7 +112,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, eon_type)
                 row = cursor.fetchone()
         except Exception as err:
-            self.log(f"get_metadata_id: {err.message}", level="ERROR")
+            self.log(f"get_metadata_id: {err}", level="ERROR")
         finally:
             connection.close()
             return row
@@ -143,7 +143,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, (created_date, int(metadata_id), start_date, last_reset))
                 connection.commit()
         except Exception as err:
-            self.log(f"set_dummy_value_to_statistics: {err.message}", level="ERROR")
+            self.log(f"set_dummy_value_to_statistics: {err}", level="ERROR")
         finally:
             connection.close()
 
@@ -179,7 +179,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, input)
                 row = cursor.fetchone()
         except Exception as err:
-            self.log(f"ERROR - get_first_state: {err.message}", level="ERROR")
+            self.log(f"ERROR - get_first_state: {err}", level="ERROR")
         finally:
             connection.close()
             return row
@@ -200,7 +200,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, input)
                 connection.commit()
         except Exception as err:
-            self.log(f"ERROR - set_sum_and_state: {err.message}", level="ERROR")
+            self.log(f"ERROR - set_sum_and_state: {err}", level="ERROR")
         finally:
             connection.close()
 
@@ -224,7 +224,7 @@ class NormalizedEnergyUsage(hass.Hass):
             with connection.cursor() as cursor:
                 sql = ( "SELECT s.id as statistic_id, s.created as created, s.`start` as start_date, s.state as state, s.sum as sum_state, sm.statistic_id as statistic_id, fixed.state as fixed_state FROM statistics s "
                         "join statistics_meta sm on s.metadata_id = sm.id "
-                        "join states fixed on fixed.entity_id = sm.statistic_id AND fixed.created = DATE_ADD(s.`start`, INTERVAL 1 DAY_HOUR) "
+                        "join states fixed on fixed.entity_id = sm.statistic_id AND fixed.last_changed = DATE_ADD(s.`start`, INTERVAL 1 DAY_HOUR) "
                         "WHERE sm.statistic_id = %s "
                         "AND s.`start` between %s and %s "
                         "ORDER BY `start`;")
@@ -232,7 +232,7 @@ class NormalizedEnergyUsage(hass.Hass):
                 cursor.execute(sql, (eon_type, final_since, final_until))
                 rows = cursor.fetchall()
         except Exception as err:
-            self.log(f"ERROR - get_states: {err.message}", level="ERROR")
+            self.log(f"ERROR - get_states: {err}", level="ERROR")
         finally:
             connection.close()
             return rows

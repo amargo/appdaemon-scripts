@@ -218,7 +218,7 @@ class Eon(hass.Hass):
                 cursor.execute(sql, input)
                 connection.commit()
         except Exception as err:
-            self.log(f"Error - set_timestamp: {err.message}", level="ERROR")
+            self.log(f"Error - set_timestamp: {err}", level="ERROR")
         finally:
             connection.close()
 
@@ -244,7 +244,7 @@ class Eon(hass.Hass):
                 rows = cursor.fetchall()
                 self.log(f"rows - get_states {rows}.", level="DEBUG")
         except Exception as err:
-            self.log(f"Error - get_states: {err.message}", level="ERROR")
+            self.log(f"Error - get_states: {err}", level="ERROR")
         finally:
             connection.close()
             return rows
