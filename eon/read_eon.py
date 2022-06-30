@@ -206,19 +206,19 @@ class Eon(hass.Hass):
                                     cursorclass=pymysql.cursors.DictCursor)
         try:
             with connection.cursor() as cursor:
-                sql = """UPDATE states SET last_changed = %s, last_updated = %s, created = %s, state = %s WHERE state_id = %s"""
+                sql = """UPDATE states SET last_changed = %s, last_updated = %s, state = %s WHERE state_id = %s"""
                 eon_formatted_date = eon_time.strftime('%Y-%m-%d %H:%M:%S')
-                input = (eon_formatted_date, eon_formatted_date, eon_formatted_date, str(eon_value), state_id)
+                input = (eon_formatted_date, eon_formatted_date, str(eon_value), state_id)
                 cursor.execute(sql, input)
                 connection.commit()
             with connection.cursor() as cursor:
-                sql = """UPDATE events SET time_fired = %s, created = %s WHERE event_id = %s"""
+                sql = """UPDATE events SET time_fired = %s WHERE event_id = %s"""
                 eon_formatted_date = eon_time.strftime('%Y-%m-%d %H:%M:%S')
-                input = (eon_formatted_date, eon_formatted_date, event_id)
+                input = (eon_formatted_date, event_id)
                 cursor.execute(sql, input)
                 connection.commit()
         except Exception as err:
-            self.log(f"Error - set_timestamp: {err.message}", level="ERROR")
+            self.log(f"Error - set_timestamp: {err}", level="ERROR")
         finally:
             connection.close()
 
@@ -235,7 +235,7 @@ class Eon(hass.Hass):
                                     cursorclass=pymysql.cursors.DictCursor)
         try:
             with connection.cursor() as cursor:
-                sql = ( "SELECT state_id, entity_id, state, created, event_id FROM states s "
+                sql = ( "SELECT state_id, entity_id, state, event_id FROM states s "
                         "JOIN state_attributes sa on s.attributes_id = sa.attributes_id "
                         "WHERE entity_id = %s " )
                 if extra_parameter:
@@ -244,7 +244,7 @@ class Eon(hass.Hass):
                 rows = cursor.fetchall()
                 self.log(f"rows - get_states {rows}.", level="DEBUG")
         except Exception as err:
-            self.log(f"Error - get_states: {err.message}", level="ERROR")
+            self.log(f"Error - get_states: {err}", level="ERROR")
         finally:
             connection.close()
             return rows
