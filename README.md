@@ -17,6 +17,9 @@ If you have never used Appdaemon before please you read the following tutorials:
 
 ### EON
 
+## Requirements 
+* MariaDB [more information](https://github.com/home-assistant/addons/blob/master/mariadb/DOCS.md)
+
 Are explained [here](eon/README.md)
 
 ```yaml
