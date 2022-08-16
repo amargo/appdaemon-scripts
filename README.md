@@ -41,6 +41,8 @@ Eon:
   database: <database name>
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
+  positive_a_energy: sensor.eon_positive_a_energy_power
+  negative_a_energy: sensor.eon_negative_a_energy_power  
 ```
 ### Energy Usage
 
