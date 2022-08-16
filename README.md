@@ -32,9 +32,9 @@ Eon:
   report_id: '<reportId>'
   chart_id: '<chartId>'
   last_reset: "2020-09-14T11:25:00+00:00" When E.ON reading of meters
-  every_hour: 1
+  every_hour: 8
   hyphen: '<->'
-  offset: -2
+  offset: -3
   host: <database connection host>
   username_db: <username_db>
   password_db: <password_db>
@@ -58,7 +58,7 @@ normalized_energy_usage:
   database: <database name>
   offset: -2
   numdays: 4
-  every_hour: 1
+  every_hour: 4
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
 ```
