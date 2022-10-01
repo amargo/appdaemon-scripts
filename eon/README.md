@@ -1,45 +1,134 @@
-# EON
+# E.ON – Távleolvasás integráció Home Assistant
 
 ## About
 
 Magyar E.ON távleolvasási portálon keresztül jövő adatokat lehet Home Assistant rendszernek tovább küldeni
 Szabadon tovább fejleszthető, 1-2 óra alatt készült el ezért nagy hibakezelések és szofisztikált feladatok megoldására nem alkalmas.
 
-# Requirements
+# Követelmények
 
-Olyan GSM-es óra, amit küldi az adatokat a szolgáltató felé.
-E.ON távleolvasási portálján érvényes regisztráció: https://energia.eon-hungaria.hu/W1000
-Érvényes POD elérés után egy munkaterületet kell létrehozni, amin csak az 1.8.0 és 2.8.0 szerepeljen:
+* Olyan GSM-es óra, amit küldi az adatokat a szolgáltató felé.
+* E.ON távleolvasási portálján érvényes regisztráció: https://energia.eon-hungaria.hu/W1000
+* MariaDB Add-On integráció (Bővítménybolt, https://github.com/home-assistant/addons/blob/master/mariadb/DOCS.md)
+* AppDaemon Add-On integráció (Bővítménybolt, https://github.com/hassio-addons/addon-appdaemon)
+* Érvényes POD
+
+# Lépések
+* Regisztrálni az https://energia.eon-hungaria.hu/W1000 oldalon és amint az EON jóváhagyja a regisztrációt akkor, a regisztrációkor használt belépési adatokat tudjuk használni az integrációnál
+* Amint megkaptuk a visszaigazolást akkor létre kell hozni ezeket a jelentéseket:
+  * Jelentés 1 : hét nézet 1.8 – 2.8 (2.8 a visszatermelés napelem esetén)
+  * Jelentés 2: - A /+ A  
+  amikor ez meg van belépés előtt a chrome böngészőben (F12) megnyom és a Network fül kiválaszt ahogy a képen is látható ... legörgetni ezekhez a fülekhez és dupla kattintással ellenőrizzük hogy melyik ID a ReportID és melyik a ChartID, amit később a HA integrációnál szükséges lesz a ead_eon.yaml file konfigurálásához.
+  * ReportID ( a kitakart zónában megjelenő 6 jegyű azonosító amire szükség lesz, ez ami az 1.8.-2.8 napi fogyasztás / visszatermelést mutatja a villanyóránkon ).
+    <p align="center">    
+            <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/eon_jelentes_1_2.jpg" alt="eon-mqtt">
+        <br>
+    </p>
+  * chartID (pirossal jelölt) + hypen (sárgával jelölt) -> ( a kitakart zónában megjelenő 6 jegyű azonosító, amire szükség lesz, ez ami az aktuális betermelést / fogyasztást 15 percenként frissíti az EON oldala a távleolvasási funkcióval a web oldalon).
+    <p align="center">    
+            <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/eon_jelentes.jpg" alt="eon-mqtt">
+        <br>
+    </p>
+
+# MariaDB integració (Add-ON)
+
+  <p align="center">    
+          <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/mariaDB.jpg" alt="eon-mqtt">
+          <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/mariaDB_config.jpg" alt="eon-mqtt">
+      <br>
+  </p>
+
+* Telepítés utan a config / konfiguráció fülön megadjuk a következő adatokat
+  * TOVÁBBI OPCIOK FÜLÖN:
+    * ADATBAZIS NEVE: homeassistant (ebben a példában)
+    * Jelszó / Password: homeassistant (ebben a példában, ha nem adunk meg jelszót nem lehet menteni a konfigurációt)
+  * HÁLOZAT FÜLÖN:
+    * Port : 3306 (ezt kell megadni)
+  * FileEditorral vagy file kezelőben szerkesztésre megnyitjuk a configuration.yaml file-t, dokumentáció szerint beillesztjük pl.: 
+    ```
+    recorder:
+    db_url: mysql://homeassistant:homeassistant@core-mariadb/homeassistant?charset=utf8mb4
+    ```
+    a fentebbi példa jelszó / adatbázis név stb. van itt is megadva
+      <p align="center">    
+              <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/ha_recorder.jpg" alt="eon-mqtt">
+          <br>
+      </p>
+
+  <mark>
+  fejlesztői eszközök -> konfiguráció ellenőrzése -> HA újraindítása
+  </mark>
+  
+* HA újraindulasa utan:
+  Bővítmények -> az Info fülre kattintva -> inditsuk el a MariDB-t a LOG fülre kattintva megnézhetjük / ellenőrizhetjük hogy a MariaDB rendben lefutott
+    <p align="center">    
+            <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/mariaDB_log.jpg" alt="eon-mqtt">
+        <br>
+    </p>    
+
+# AppDaemon integració (Add-ON)
+
+  <p align="center">    
+          <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/appdaemon.jpg" alt="eon-mqtt">
+          <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/appdaemon_config.jpg" alt="eon-mqtt">
+      <br>
+  </p>
+
+* TOVÁBBI OPCIOK FÜLÖN:
+  * Python packeges-nel következőket felvenni
+    * request
+    * bs4 
+    * datetime
+    * pymysql
+  * HÁLOZAT FÜLÖN:
+    * Port : 5050 (ezt kell megadni ha nem lenne megadva automatikusan)
+* A github linkről letöltött .tar file-t kicsomagoljuk , és a Home Assistan config/AppDaemon/apps mappába bemásoljuk ezt egyszerűen meg tehetjük Samba share-t a Add-on ként feltesszük a HA-ba és mint meghajtókent lathatjuk a file kezelőben vagy VS Code Add-on-t használjuk.
+* Először  csak a read_eon.yaml fontos, hogy lássuk maga az EON távolvasási portálról műküdik az adat olvasás... addig a normalized_energy_usage mappát nem is kell átmasolnunk csak a többit! Különben nem latjuk hogy az read_eon.yaml milyen hibaüzenetet ad és hogy jól fut-e a gépünkön.
+* Következő lépésként text Editor segítségével beírjuk a read_eon.yaml file-be az alábbiakat:
+  ```yaml
+  Eon:
+    module: read_eon
+    class: Eon
+    eon_url: 'https://energia.eon-hungaria.hu/W1000'
+    username: '<username>'
+    password: '<password>'
+    report_id: '<reportId>'
+    chart_id: '<chartId>'
+    last_reset: "2020-09-14T11:25:00+00:00" When E.ON reading of meters
+    every_hour: 8
+    hyphen: '<->'
+    offset: -3
+    host: <database connection host>
+    username_db: <username_db>
+    password_db: <password_db>
+    database: <database name>
+    1_8_0_sensor: sensor.eon_1_8_0_energy_total
+    2_8_0_sensor: sensor.eon_2_8_0_energy_total
+    positive_a_energy: sensor.eon_positive_a_energy_power
+    negative_a_energy: sensor.eon_negative_a_energy_power  
+  ```
+  Ez után azt kell látnunk hogy megjelenik az áttekintés fülön a HA-ban
+
+* normalized_energy_usage.yaml -> konfigurálása:
+  ```yaml
+  normalized_energy_usage:
+    class: NormalizedEnergyUsage
+    module: normalized_energy_usage
+    host: <database connection host>
+    username: <username_db>
+    password: <password_db>
+    database: <database name>
+    offset: -2
+    numdays: 4
+    every_hour: 4
+    1_8_0_sensor: sensor.eon_1_8_0_energy_total
+    2_8_0_sensor: sensor.eon_2_8_0_energy_total
+  ```  
+# Végeredmény
 <p align="center">    
-        <img src="https://github.com/amargo/eon-mqtt/raw/master/img/eon-workarea.PNG" alt="eon-mqtt">
+        <img src="https://github.com/amargo/appdeamon-scripts/raw/main/eon/img/ha_energy.jpg" alt="eon-mqtt">
     <br>
 </p>
 
-Továbbá két Id-t kellett még megtudnom ezeket postman-os vizsgálatok során vettem észre, a reportId és a hyphen (ami nem tudom mi célt szolgál), de ezeket is át kell adni.
-<p align="center">    
-        <img src="https://github.com/amargo/eon-mqtt/raw/master/img/E.ON.PNG" alt="eon-mqtt">
-    <br>
-</p>
-
-Chrome-ban login előtt egy F12 és a Network tabon látszódni fog a reportId és a kötőjel (vagy aláhúzás). 
-<p align="center">    
-        <img src="https://github.com/amargo/eon-mqtt/raw/master/img/eon_reportId_hyphen.PNG" alt="eon-mqtt">
-    <br>
-</p>
-
-# Installation
-
-```yaml
-Eon:
-  module: read_eon
-  class: Eon
-  eon_url: 'https://energia.eon-hungaria.hu/W1000'
-  username: '<felhasználói azonosítód>'
-  password: '<felhasználói jelszavad>'
-  report_id: '<reportId>'
-  every_hour: 6
-  hyphen: '<->'
-  offset: 0
-  class: Eon
-  dependencies: globals
-```
+# Végszó
+Nagy köszönet Pintér Roland-nak a részletes dokumentáció elkészítésében :)
