@@ -76,8 +76,8 @@ Szabadon tovább fejleszthető, 1-2 óra alatt készült el ezért nagy hibakeze
 
 * TOVÁBBI OPCIOK FÜLÖN:
   * Python packeges-nel következőket felvenni
-    * request
-    * bs4 
+    * requests
+    * bs4
     * datetime
     * pymysql
   * HÁLOZAT FÜLÖN:
