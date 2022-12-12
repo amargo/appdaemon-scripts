@@ -13,7 +13,8 @@ EON_ACCOUNT_URL = f'{EON_BASE_URL}Account/Login'
 EON_PROFILE_DATA_URL = f'{EON_BASE_URL}ProfileData/ProfileData'
 
 class Eon(hass.Hass):
-    config = {}
+    config = None
+    session = None
 
     def initialize(self):
         self.config = self.args
@@ -26,14 +27,14 @@ class Eon(hass.Hass):
 
     def read_data(self, kwargs):
         self.log("Starting E.ON reader", level="INFO")
-        session = self.login(self.config['eon_user'], self.config['eon_password'])
+        self.session = self.login(self.config['eon_user'], self.config['eon_password'])
         self.log("Start receiving data", level="INFO")
-        eon_1_8_0_report, eon_2_8_0_report = self.get_report_data(session)
+        eon_1_8_0_report, eon_2_8_0_report = self.get_report_data()
         self.log("Start receiving chart data", level="INFO")
-        self.get_chart_data(session, eon_1_8_0_report, eon_2_8_0_report)
+        self.get_chart_data(eon_1_8_0_report, eon_2_8_0_report)
         self.log("END processing data", level="INFO")
 
-    def get_chart_data(self, session, eon_1_8_0_report, eon_2_8_0_report):
+    def get_chart_data(self, eon_1_8_0_report, eon_2_8_0_report):
         timezone = pytz.timezone("Europe/Budapest")
 
         self.log(f"eon_1_8_0_report: {eon_1_8_0_report}", level="INFO")
@@ -47,8 +48,10 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            json_response = self.get_data(session, self.config['report_id_pa_ma'], 200, final_since_time, final_until_time)
-            # self.log("Test1", level="INFO")
+            json_response = self.get_data(report_id=self.config['report_id_pa_ma'],
+                                          per_page_number=200,
+                                          since=final_since_time,
+                                          until=final_until_time)
 
             eon_sum_value = eon_daily_value
             self.log(json_response[0]['data'], level="DEBUG", ascii_encode=False)
@@ -83,7 +86,10 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            json_response = self.get_data(session, self.config['report_id_pa_ma'], 200, final_since_time, final_until_time)
+            json_response = self.get_data(report_id=self.config['report_id_pa_ma'],
+                                          per_page_number=200,
+                                          since=final_since_time,
+                                          until=final_until_time)
 
             eon_sum_value = eon_daily_value
             self.log(json_response[1]['data'], level="DEBUG", ascii_encode=False)
@@ -150,9 +156,8 @@ class Eon(hass.Hass):
 
         return eon_sum_value
 
-    def get_report_data(self, session):
-        json_response = self.get_data(session=session,
-                                      report_id=self.config['report_id_180_280'],
+    def get_report_data(self):
+        json_response = self.get_data(report_id=self.config['report_id_180_280'],
                                       per_page_number=10,
                                       since=None,
                                       until=None)
@@ -200,7 +205,7 @@ class Eon(hass.Hass):
             self.log(
                 f"{eon_sensor}: eon_value is {str(eon_value)}, eon_time: {eon_time.strftime('%Y-%m-%d %H:%M:%S')}", level="INFO")
 
-    def get_data(self, session, report_id, per_page_number, since, until):
+    def get_data(self, report_id, per_page_number, since, until):
 
         offset = int(self.offset)
         if not since:
@@ -217,7 +222,7 @@ class Eon(hass.Hass):
         }
 
         self.log(f"get_eon_params: {params}", level="INFO")
-        data_content = session.get(EON_PROFILE_DATA_URL, params=params, verify=True)
+        data_content = self.session.get(EON_PROFILE_DATA_URL, params=params, verify=True)
         json_response = data_content.json()
         return json_response
 
