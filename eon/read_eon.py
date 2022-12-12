@@ -1,45 +1,23 @@
-import appdaemon.plugins.hass.hassapi as hass
-import json
-import requests
 import datetime
-import time
+import requests
 import pytz
 import pymysql.cursors
+
+import appdaemon.plugins.hass.hassapi as hass
 
 # from config_args import Config
 from bs4 import BeautifulSoup
 
-BASE_URL = 'https://energia.eon-hungaria.hu/W1000/'
-ACCOUNT_URL = f'{BASE_URL}Account/Login'
-PROFILE_DATA_URL = f'{BASE_URL}ProfileData/ProfileData'
-
-class Config():
-    CONFIG = {}
-
-    def __init__(self, args, log):
-        self.__class__.CONFIG['db_user'] = args['db_user']
-        self.__class__.CONFIG['db_password'] = args['db_password']
-        self.__class__.CONFIG['db_name'] = args['db_name']
-        self.__class__.CONFIG['db_host'] = args['db_host']
-
-        self.__class__.CONFIG['eon_user'] = args['eon_user']
-        self.__class__.CONFIG['eon_password'] = args['eon_password']
-        self.__class__.CONFIG['report_id_180_280'] = args['eon_report_id_180_280']
-        self.__class__.CONFIG['report_id_pa_ma'] = args['eon_report_id_pa_ma']
-
-        self.__class__.CONFIG['every_hour'] = args['every_hour']
-        self.__class__.CONFIG['offset'] = args['offset']
-
-        self.__class__.CONFIG['1_8_0_sensor'] = args['1_8_0_sensor']
-        self.__class__.CONFIG['2_8_0_sensor'] = args['2_8_0_sensor']
-        self.__class__.CONFIG['positive_a_energy'] = args['positive_a_energy']
-        self.__class__.CONFIG['negative_a_energy'] = args['negative_a_energy']
+EON_BASE_URL = 'https://energia.eon-hungaria.hu/W1000/'
+EON_ACCOUNT_URL = f'{EON_BASE_URL}Account/Login'
+EON_PROFILE_DATA_URL = f'{EON_BASE_URL}ProfileData/ProfileData'
 
 class Eon(hass.Hass):
+    config = {}
+
     def initialize(self):
-        every_hour = self.args['every_hour']
-        # time = datetime.time(0, 0, 0)
-        self.run_every(self.read_data, "now", every_hour * (60*60))
+        self.config = self.args
+        self.run_every(self.read_data, "now", self.config['every_hour'] * (60*60))
 
     def get_verificationtoken(self, content):
         self.log("get verification token from E.ON portal", level="INFO")
@@ -47,33 +25,20 @@ class Eon(hass.Hass):
         return toke.get('value')
 
     def read_data(self, kwargs):
-        Config(self.args, self.log)
-        account_url = ACCOUNT_URL
-        profile_data_url = PROFILE_DATA_URL
-        username = Config.CONFIG['eon_user']
-        password = Config.CONFIG['eon_password']
-        self.db_host = Config.CONFIG['db_host']
-        self.db_name = Config.CONFIG['db_name']
-        self.db_password = Config.CONFIG['db_password']
-        self.db_user = Config.CONFIG['db_user']
-        self.offset = Config.CONFIG['offset']
-
         self.log("Starting E.ON reader", level="INFO")
-        session = self.login(account_url, username, password)
+        session = self.login(EON_ACCOUNT_URL, self.config['eon_user'], self.config['eon_password'])
         self.log("Start receiving data", level="INFO")
-        eon_1_8_0_report, eon_2_8_0_report = self.get_report_data(
-            profile_data_url, session)
-        self.log(f"Start receiving chart data", level="INFO")
-        self.get_chart_data(profile_data_url, session,
-                            eon_1_8_0_report, eon_2_8_0_report)
+        eon_1_8_0_report, eon_2_8_0_report = self.get_report_data(session)
+        self.log("Start receiving chart data", level="INFO")
+        self.get_chart_data(session, eon_1_8_0_report, eon_2_8_0_report)
         self.log("END processing data", level="INFO")
 
-    def get_chart_data(self, profile_data_url, session, eon_1_8_0_report, eon_2_8_0_report):
-        sensor_1_8_0_sensor = Config.CONFIG['1_8_0_sensor']
-        sensor_2_8_0_sensor = Config.CONFIG['2_8_0_sensor']
-        positive_a_energy = Config.CONFIG['positive_a_energy']
-        negative_a_energy = Config.CONFIG['negative_a_energy']
-        report_id = Config.CONFIG['report_id_pa_ma']
+    def get_chart_data(self, session, eon_1_8_0_report, eon_2_8_0_report):
+        sensor_1_8_0_sensor = self.config['1_8_0_sensor']
+        sensor_2_8_0_sensor = self.config['2_8_0_sensor']
+        positive_a_energy = self.config['positive_a_energy']
+        negative_a_energy = self.config['negative_a_energy']
+        report_id = self.config['report_id_pa_ma']
         timezone = pytz.timezone("Europe/Budapest")
 
         self.log(f"eon_1_8_0_report: {eon_1_8_0_report}", level="INFO")
@@ -87,12 +52,12 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            jsonResponse = self.get_data(profile_data_url, session, report_id, 200, final_since_time, final_until_time)
+            json_response = self.get_data(session, report_id, 200, final_since_time, final_until_time)
             # self.log("Test1", level="INFO")
 
             eon_sum_value = eon_daily_value
-            self.log(jsonResponse[0]['data'], level="DEBUG", ascii_encode=False)
-            for positive_a in jsonResponse[0]['data']:
+            self.log(json_response[0]['data'], level="DEBUG", ascii_encode=False)
+            for positive_a in json_response[0]['data']:
                 eon_sum_value = self.collect_chart_data(positive_a, positive_a_energy, eon_positive_a, sensor_1_8_0_sensor, eon_1_8_0_report,
                                                         eon_positive_a_total, eon_daily_time, eon_sum_value, sensor_1_8_0_sensor, "EON +A energy power", "EON consumption energy total")
 
@@ -116,11 +81,11 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            jsonResponse = self.get_data(profile_data_url, session, report_id, 200, final_since_time, final_until_time)
+            json_response = self.get_data(session, report_id, 200, final_since_time, final_until_time)
 
             eon_sum_value = eon_daily_value
-            self.log(jsonResponse[1]['data'], level="DEBUG", ascii_encode=False)
-            for negative_a in jsonResponse[1]['data']:
+            self.log(json_response[1]['data'], level="DEBUG", ascii_encode=False)
+            for negative_a in json_response[1]['data']:
                 eon_sum_value = self.collect_chart_data(negative_a, negative_a_energy, eon_negative_a, sensor_2_8_0_sensor, eon_2_8_0_report,
                                                         eon_negative_a_total, eon_daily_time, eon_sum_value, sensor_2_8_0_sensor, "EON -A energy power", "EON export energy total")
 
@@ -164,17 +129,16 @@ class Eon(hass.Hass):
 
         return eon_sum_value
 
-    def get_report_data(self, profile_data_url, session):
-        report_id = Config.CONFIG['report_id_180_280']
-        jsonResponse = self.get_data(
-            profile_data_url, session, report_id, 10, None, None)
-        self.log(f"report_id_180_280: {jsonResponse}", level="DEBUG", ascii_encode=False)
-        sensor_1_8_0_sensor = Config.CONFIG['1_8_0_sensor']
-        sensor_2_8_0_sensor = Config.CONFIG['2_8_0_sensor']
+    def get_report_data(self, session):
+        report_id = self.config['report_id_180_280']
+        json_response = self.get_data(session, report_id, 10, None, None)
+        self.log(f"report_id_180_280: {json_response}", level="DEBUG", ascii_encode=False)
+        sensor_1_8_0_sensor = self.config['1_8_0_sensor']
+        sensor_2_8_0_sensor = self.config['2_8_0_sensor']
 
         eon_1_8_0_report = {}
-        self.log(jsonResponse[0]['data'], level="DEBUG", ascii_encode=False)
-        for eon_1_8_0_data in jsonResponse[0]['data']:
+        self.log(json_response[0]['data'], level="DEBUG", ascii_encode=False)
+        for eon_1_8_0_data in json_response[0]['data']:
             self.collect_daily_data(
                 eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
 
@@ -185,8 +149,8 @@ class Eon(hass.Hass):
                 sensor_1_8_0_sensor, eon_1_8_0_report)
 
         eon_2_8_0_report = {}
-        self.log(jsonResponse[1]['data'], level="DEBUG", ascii_encode=False)
-        for eon_2_8_0_data in jsonResponse[1]['data']:
+        self.log(json_response[1]['data'], level="DEBUG", ascii_encode=False)
+        for eon_2_8_0_data in json_response[1]['data']:
             self.collect_daily_data(
                 eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
 
@@ -212,7 +176,7 @@ class Eon(hass.Hass):
             self.log(
                 f"{eon_sensor}: eon_value is {str(eon_value)}, eon_time: {eon_time.strftime('%Y-%m-%d %H:%M:%S')}", level="INFO")
 
-    def get_data(self, profile_data_url, session, report_id, per_page_number, since, until):
+    def get_data(self, session, report_id, per_page_number, since, until):
 
         offset = int(self.offset)
         if not since:
@@ -229,13 +193,13 @@ class Eon(hass.Hass):
         }
 
         self.log(f"get_eon_params: {params}", level="INFO")
-        data_content = session.get(profile_data_url, params=params, verify=True)
-        jsonResponse = data_content.json()
-        return jsonResponse
+        data_content = session.get(EON_PROFILE_DATA_URL, params=params, verify=True)
+        json_response = data_content.json()
+        return json_response
 
-    def login(self, account_url, username, password):
+    def login(self, username, password):
         session = requests.Session()
-        content = session.get(account_url, verify=True)
+        content = session.get(EON_ACCOUNT_URL, verify=True)
         index_content = BeautifulSoup(content.content, "html.parser")
         request_verification_token = self.get_verificationtoken(index_content)
 
@@ -246,8 +210,7 @@ class Eon(hass.Hass):
         }
 
         header = {"Content-Type": "application/x-www-form-urlencoded"}
-        content = session.post(account_url, data=payload,
-                               headers=header, verify=True)
+        content = session.post(EON_ACCOUNT_URL, data=payload, headers=header, verify=True)
         return session
 
     def normalize_eon_chart_data(self, eon_type, data):
@@ -267,25 +230,24 @@ class Eon(hass.Hass):
         self.log("END - normalize_eon_chart_data", level="DEBUG")
 
     def set_timestamp_and_state(self, eon_time, eon_value, state_id, event_id):
-        connection = pymysql.connect(host=self.db_host,
-                                     user=self.db_user,
-                                     password=self.db_password,
-                                     db=self.db_name,
+        connection = pymysql.connect(host=self.config["db_host"],
+                                     user=self.config["db_user"],
+                                     password=self.config["db_password"],
+                                     db=self.config["db_name"],
                                      charset='utf8mb4',
                                      cursorclass=pymysql.cursors.DictCursor)
         try:
             with connection.cursor() as cursor:
-                sql = """UPDATE states SET last_changed = %s, last_updated = %s, state = %s WHERE state_id = %s"""
+                sql_query = "UPDATE states SET last_changed = %s, last_updated = %s, state = %s WHERE state_id = %s"
                 eon_formatted_date = eon_time.strftime('%Y-%m-%d %H:%M:%S')
-                input = (eon_formatted_date, eon_formatted_date,
-                         str(eon_value), state_id)
-                cursor.execute(sql, input)
+                sql_params = (eon_formatted_date, eon_formatted_date, str(eon_value), state_id)
+                cursor.execute(sql_query, sql_params)
                 connection.commit()
             with connection.cursor() as cursor:
-                sql = """UPDATE events SET time_fired = %s WHERE event_id = %s"""
+                sql_query = "UPDATE events SET time_fired = %s WHERE event_id = %s"
                 eon_formatted_date = eon_time.strftime('%Y-%m-%d %H:%M:%S')
-                input = (eon_formatted_date, event_id)
-                cursor.execute(sql, input)
+                sql_params = (eon_formatted_date, event_id)
+                cursor.execute(sql_query, sql_params)
                 connection.commit()
         except Exception as err:
             self.log(f"Error - set_timestamp: {err}", level="ERROR")
@@ -293,14 +255,12 @@ class Eon(hass.Hass):
             connection.close()
 
     def get_states(self, eon_type, extra_parameter):
-
-
         self.log(
             f"Connect to the database - get_states - {extra_parameter}", level="DEBUG")
-        connection = pymysql.connect(host=self.db_host,
-                                     user=self.db_user,
-                                     password=self.db_password,
-                                     db=self.db_name,
+        connection = pymysql.connect(host=self.config["db_host"],
+                                     user=self.config["db_user"],
+                                     password=self.config["db_password"],
+                                     db=self.config["db_name"],
                                      charset='utf8mb4',
                                      cursorclass=pymysql.cursors.DictCursor)
         try:
