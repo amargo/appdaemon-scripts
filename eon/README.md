@@ -2,19 +2,19 @@
 
 ## About
 
-Magyar E.ON távleolvasási portálon keresztül jövő adatokat lehet Home Assistant rendszernek tovább küldeni
-Szabadon tovább fejleszthető, 1-2 óra alatt készült el ezért nagy hibakezelések és szofisztikált feladatok megoldására nem alkalmas.
+Ezzel az appdaemon scripttel a magyar E.ON távleolvasási portálon keresztül jövő adatokat lehet Home Assistant rendszernek továbbküldeni.
+Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezelések és szofisztikált feladatok megoldására nem alkalmas.
 
 # Követelmények
 
-* Olyan GSM-es óra, amit küldi az adatokat a szolgáltató felé.
+* Olyan GSM-es oda-vissza mérő (ad-vesz) villanyóra, ami küldi az adatokat a szolgáltató felé.
 * E.ON távleolvasási portálján érvényes regisztráció: https://energia.eon-hungaria.hu/W1000
 * MariaDB Add-On integráció (Bővítménybolt, https://github.com/home-assistant/addons/blob/master/mariadb/DOCS.md)
 * AppDaemon Add-On integráció (Bővítménybolt, https://github.com/hassio-addons/addon-appdaemon)
 * Érvényes POD
 
 # Lépések
-* Regisztrálni az https://energia.eon-hungaria.hu/W1000 oldalon és amint az EON jóváhagyja a regisztrációt akkor, a regisztrációkor használt belépési adatokat tudjuk használni az integrációnál
+* Regisztrálni az https://energia.eon-hungaria.hu/W1000 oldalon, és amint az EON jóváhagyja a regisztrációt, a regisztrációkor használt belépési adatokat tudjuk használni az integrációnál.
 * Amint megkaptuk a visszaigazolást akkor létre kell hozni ezeket a jelentéseket:
   * Jelentés 1 : hét nézet 1.8 – 2.8 (2.8 a visszatermelés napelem esetén)
   * Jelentés 2: - A /+ A  
@@ -89,23 +89,22 @@ Szabadon tovább fejleszthető, 1-2 óra alatt készült el ezért nagy hibakeze
   Eon:
     module: read_eon
     class: Eon
-    eon_url: 'https://energia.eon-hungaria.hu/W1000'
-    username: '<username>'
-    password: '<password>'
-    report_id: '<reportId>'
-    chart_id: '<chartId>'
-    last_reset: "2020-09-14T11:25:00+00:00" When E.ON reading of meters
+    eon_user: '<username>'
+    eon_password: '<password>'
+    eon_report_id_180_280: '<reportId a jelentés 1-hez>'
+    eon_report_id_pa_ma: '<reportId a jelentés 2-höz>'
     every_hour: 8
-    hyphen: '<->'
-    offset: -3
-    host: <database connection host>
-    username_db: <username_db>
-    password_db: <password_db>
-    database: <database name>
-    1_8_0_sensor: sensor.eon_1_8_0_energy_total
-    2_8_0_sensor: sensor.eon_2_8_0_energy_total
-    positive_a_energy: sensor.eon_positive_a_energy_power
-    negative_a_energy: sensor.eon_negative_a_energy_power  
+    offset: -4
+    db_host: '<database connection host>'
+    db_user: '<database username>'
+    db_password: '<database password>'
+    db_name: '<database name>'
+    sensor_1_8_0: sensor.eon_1_8_0_energy_total
+    sensor_2_8_0: sensor.eon_2_8_0_energy_total
+    sensor_positive_a_energy: sensor.eon_positive_a_energy
+    sensor_negative_a_energy: sensor.eon_negative_a_energy
+    sensor_positive_a_power: sensor.eon_positive_a_power
+    sensor_negative_a_power: sensor.eon_negative_a_power 
   ```
   Ez után azt kell látnunk hogy megjelenik az áttekintés fülön a HA-ban
 

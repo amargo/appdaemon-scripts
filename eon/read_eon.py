@@ -48,7 +48,7 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            json_response = self.get_data(report_id=self.config['report_id_pa_ma'],
+            json_response = self.get_data(report_id=self.config['eon_report_id_pa_ma'],
                                           per_page_number=200,
                                           since=final_since_time,
                                           until=final_until_time)
@@ -86,7 +86,7 @@ class Eon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            json_response = self.get_data(report_id=self.config['report_id_pa_ma'],
+            json_response = self.get_data(report_id=self.config['eon_report_id_pa_ma'],
                                           per_page_number=200,
                                           since=final_since_time,
                                           until=final_until_time)
@@ -157,13 +157,13 @@ class Eon(hass.Hass):
         return eon_sum_value
 
     def get_report_data(self):
-        json_response = self.get_data(report_id=self.config['report_id_180_280'],
+        json_response = self.get_data(report_id=self.config['eon_report_id_180_280'],
                                       per_page_number=10,
                                       since=None,
                                       until=None)
-        self.log(f"report_id_180_280: {json_response}", level="DEBUG", ascii_encode=False)
-        sensor_1_8_0_sensor = self.config['1_8_0_sensor']
-        sensor_2_8_0_sensor = self.config['2_8_0_sensor']
+        self.log(f"eon_report_id_180_280: {json_response}", level="DEBUG", ascii_encode=False)
+        sensor_1_8_0_sensor = self.config['sensor_1_8_0']
+        sensor_2_8_0_sensor = self.config['sensor_2_8_0']
 
         eon_1_8_0_report = {}
         self.log(json_response[0]['data'], level="DEBUG", ascii_encode=False)
@@ -207,7 +207,7 @@ class Eon(hass.Hass):
 
     def get_data(self, report_id, per_page_number, since, until):
 
-        offset = int(self.offset)
+        offset = int(self.config['offset'])
         if not since:
             since = (datetime.datetime.now() + datetime.timedelta(days=-1 + offset))
         if not until:
