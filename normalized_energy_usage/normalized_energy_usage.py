@@ -6,17 +6,8 @@ import pymysql.cursors
 class NormalizedEnergyUsage(hass.Hass):
     def initialize(self):
         every_hour = self.args['every_hour']
-
-        self.log(f"START - every {every_hour} hour(s)", level="INFO")
+        # time = datetime.time(0, 0, 0)
         self.run_every(self.setup, "now", every_hour * (60*60))
-        
-        if 'run_daily_at' in self.config:
-            runtime = datetime.datetime.strptime(self.config['run_daily_at'], '%H:%M').time()
-        else:
-            runtime = datetime.time(7,40, 0)
-            
-        self.log(f"START - daily at {runtime}", level="INFO")
-        self.run_daily(self.setup, runtime)        
 
 
     def setup(self, kwargs):
