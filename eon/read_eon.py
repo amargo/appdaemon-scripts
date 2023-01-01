@@ -18,7 +18,14 @@ class Eon(hass.Hass):
 
     def initialize(self):
         self.config = self.args
-        self.run_every(self.read_data, "now", self.config['every_hour'] * (60*60))
+        
+        if 'run_daily_at' in self.config:
+            runtime = datetime.datetime.strptime(self.config['run_daily_at'], '%H:%M').time()
+        else:
+            runtime = datetime.time(7,30, 0)
+            
+        self.log(f"START - daily at {runtime}", level="INFO")
+        self.run_daily(self.read_data, runtime)      
 
     def get_verificationtoken(self, content):
         self.log("get verification token from E.ON portal", level="INFO")

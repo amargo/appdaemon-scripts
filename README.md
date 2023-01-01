@@ -36,8 +36,8 @@ Eon:
   db_password: <db_password>
   db_name: <database_name>
 
-  every_hour: 6
   offset: -4
+  run_daily_at: 07:30
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
   positive_a_energy: sensor.eon_positive_a_energy_power
@@ -55,9 +55,9 @@ normalized_energy_usage:
   username: <username_db>
   password: <password_db>
   database: <database name>
-  offset: -2
   numdays: 4
-  every_hour: 4
+  every_hour: 12
+  run_daily_at: 07:30
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
 ```

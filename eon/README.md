@@ -93,8 +93,9 @@ Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezel
     eon_password: '<password>'
     eon_report_id_180_280: '<reportId a jelentés 1-hez>'
     eon_report_id_pa_ma: '<reportId a jelentés 2-höz>'
-    every_hour: 8
     offset: -4
+    run_daily_at: 07:30
+
     db_host: '<database connection host>'
     db_user: '<database username>'
     db_password: '<database password>'
@@ -117,9 +118,9 @@ Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezel
     username: <username_db>
     password: <password_db>
     database: <database name>
-    offset: -2
     numdays: 4
-    every_hour: 4
+    every_hour: 12
+    run_daily_at: 07:40
     1_8_0_sensor: sensor.eon_1_8_0_energy_total
     2_8_0_sensor: sensor.eon_2_8_0_energy_total
   ```  
