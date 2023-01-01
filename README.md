@@ -24,25 +24,24 @@ Are explained [here](eon/README.md)
 
 ```yaml
 Eon:
+  class: ReadEon
   module: read_eon
-  class: Eon
-  eon_url: 'https://energia.eon-hungaria.hu/W1000'
-  username: '<username>'
-  password: '<password>'
-  report_id: '<reportId>'
-  chart_id: '<chartId>'
-  last_reset: "2020-09-14T11:25:00+00:00" When E.ON reading of meters
-  every_hour: 8
-  hyphen: '<->'
-  offset: -3
-  host: <database connection host>
-  username_db: <username_db>
-  password_db: <password_db>
-  database: <database name>
+  eon_user: '<eon_username>'
+  eon_password: '<eon_password>'
+  eon_report_id_180_280: <reportId>
+  eon_report_id_pa_ma: <reportId>  
+
+  db_host: <database_host>
+  db_user: <db_username>
+  db_password: <db_password>
+  db_name: <database_name>
+
+  offset: -4
+  run_daily_at: '07:30'
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
   positive_a_energy: sensor.eon_positive_a_energy_power
-  negative_a_energy: sensor.eon_negative_a_energy_power  
+  negative_a_energy: sensor.eon_negative_a_energy_power 
 ```
 ### Energy Usage
 
@@ -52,13 +51,13 @@ Are explained [here](normalized_energy_usage/README.md)
 normalized_energy_usage:
   class: NormalizedEnergyUsage
   module: normalized_energy_usage
-  host: <database connection host>
+  host: <database_connection_host>
   username: <username_db>
   password: <password_db>
   database: <database name>
-  offset: -2
   numdays: 4
-  every_hour: 4
+  every_hour: 12
+  run_daily_at: '07:40'
   1_8_0_sensor: sensor.eon_1_8_0_energy_total
   2_8_0_sensor: sensor.eon_2_8_0_energy_total
 ```
