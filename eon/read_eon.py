@@ -23,7 +23,7 @@ class ReadEon(hass.Hass):
 
         self.log(f"START - daily at {runtime}", level="INFO")
         self.run_daily(self.read_data, runtime)
-        # self.run_every(self.read_data, "now", 1 * (60*60))
+
 
     def get_verificationtoken(self, content):
         self.log("get verification token from E.ON portal", level="INFO")
@@ -67,7 +67,7 @@ class ReadEon(hass.Hass):
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
             json_response = self.get_data(report_id=report_id,
-                                          per_page_number=80,
+                                          per_page_number=120,
                                           since=final_since_time,
                                           until=final_until_time)
 
@@ -105,7 +105,7 @@ class ReadEon(hass.Hass):
                 datetime.timedelta(minutes=14)
             final_until_time = final_since_time + \
                 datetime.timedelta(hours=23) + datetime.timedelta(minutes=32)
-            json_response = self.get_data(report_id, 200, final_since_time, final_until_time)
+            json_response = self.get_data(report_id=report_id, per_page_number=120, since=final_since_time, until=final_until_time)
 
             eon_sum_value = eon_daily_value
             self.log(json_response[1]['data'], level="DEBUG", ascii_encode=False)
@@ -235,7 +235,7 @@ class ReadEon(hass.Hass):
             "page": 1,
             "perPage": per_page_number,
             "reportId": report_id,
-            "since": since.strftime('%Y-%m-%dT00:00:00.000Z'),
+            "since": since.strftime('%Y-%m-%d'),
             "until": until.strftime('%Y-%m-%dT23:00:00.000Z')
         }
 
