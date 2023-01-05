@@ -28,10 +28,10 @@ class NormalizedEnergyUsage(hass.Hass):
 
         for idx, date in enumerate(date_list):
             if idx != len(date_list) -1:
-                self.fix_statistics_data(self.args["1_8_0_sensor"], date.date())
-                self.fix_statistics_data(self.args["2_8_0_sensor"], date.date())
-            self.normalize_data(self.args["1_8_0_sensor"], date.date())
-            self.normalize_data(self.args["2_8_0_sensor"], date.date())
+                self.fix_statistics_data(self.args["sensor_1_8_0"], date.date())
+                self.fix_statistics_data(self.args["sensor_2_8_0"], date.date())
+            self.normalize_data(self.args["sensor_1_8_0"], date.date())
+            self.normalize_data(self.args["sensor_2_8_0"], date.date())
 
 
     def fix_statistics_data(self, eon_type, date):

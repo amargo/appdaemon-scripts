@@ -38,8 +38,8 @@ Eon:
 
   offset: -4
   run_daily_at: '07:30'
-  1_8_0_sensor: sensor.eon_1_8_0_energy_total
-  2_8_0_sensor: sensor.eon_2_8_0_energy_total
+  sensor_1_8_0: sensor.eon_1_8_0_energy_total
+  sensor_2_8_0: sensor.eon_2_8_0_energy_total
   positive_a_energy: sensor.eon_positive_a_energy_power
   negative_a_energy: sensor.eon_negative_a_energy_power 
 ```
@@ -58,6 +58,6 @@ normalized_energy_usage:
   numdays: 4
   every_hour: 12
   run_daily_at: '07:40'
-  1_8_0_sensor: sensor.eon_1_8_0_energy_total
-  2_8_0_sensor: sensor.eon_2_8_0_energy_total
+  sensor_1_8_0: sensor.eon_1_8_0_energy_total
+  sensor_2_8_0: sensor.eon_2_8_0_energy_total
 ```

@@ -121,8 +121,8 @@ Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezel
     numdays: 4
     every_hour: 12
     run_daily_at: '07:40'
-    1_8_0_sensor: sensor.eon_1_8_0_energy_total
-    2_8_0_sensor: sensor.eon_2_8_0_energy_total
+    sensor_1_8_0: sensor.eon_1_8_0_energy_total
+    sensor_2_8_0: sensor.eon_2_8_0_energy_total
   ```  
 # Végeredmény
 <p align="center">    

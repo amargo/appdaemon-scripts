@@ -48,8 +48,8 @@ class ReadEon(hass.Hass):
         self.log("END processing data", level="INFO")
 
     def get_chart_data(self, eon_1_8_0_report, eon_2_8_0_report):
-        sensor_1_8_0_sensor = self.config['1_8_0_sensor']
-        sensor_2_8_0_sensor = self.config['2_8_0_sensor']
+        sensor_1_8_0 = self.config['sensor_1_8_0']
+        sensor_2_8_0 = self.config['sensor_2_8_0']
         positive_a_energy = self.config['positive_a_energy']
         negative_a_energy = self.config['negative_a_energy']
         report_id = self.config['eon_report_id_pa_ma']
@@ -81,7 +81,7 @@ class ReadEon(hass.Hass):
                                                         eon_a_total=eon_positive_a_total,
                                                         eon_report_time=eon_daily_time,
                                                         eon_report_value=eon_sum_value,
-                                                        eon_sensor=sensor_1_8_0_sensor,
+                                                        eon_sensor=sensor_1_8_0,
                                                         friendly_name="EON +A energy power",
                                                         total_friendly_name="EON consumption energy total")
 
@@ -89,7 +89,7 @@ class ReadEon(hass.Hass):
                 eon_positive_a_total = {
                     key: val for key, val in eon_positive_a_total.items() if val != 0}
                 self.normalize_eon_chart_data(
-                    sensor_1_8_0_sensor, eon_positive_a_total)
+                    sensor_1_8_0, eon_positive_a_total)
 
             if len(eon_positive_a) > 0:
                 self.normalize_eon_chart_data(
@@ -117,7 +117,7 @@ class ReadEon(hass.Hass):
                                                         eon_a_total=eon_negative_a_total,
                                                         eon_report_time=eon_daily_time,
                                                         eon_report_value=eon_sum_value,
-                                                        eon_sensor=sensor_2_8_0_sensor,
+                                                        eon_sensor=sensor_2_8_0,
                                                         friendly_name="EON -A energy power",
                                                         total_friendly_name="EON export energy total")
 
@@ -125,7 +125,7 @@ class ReadEon(hass.Hass):
                 eon_negative_a_total = {
                     key: val for key, val in eon_negative_a_total.items() if val != 0}
                 self.normalize_eon_chart_data(
-                    sensor_2_8_0_sensor, eon_negative_a_total)
+                    sensor_2_8_0, eon_negative_a_total)
 
             if len(eon_negative_a) > 0:
                 self.normalize_eon_chart_data(
@@ -174,32 +174,32 @@ class ReadEon(hass.Hass):
                                       since=None,
                                       until=None)
         self.log(f"eon_report_id_180_280: {json_response}", level="INFO", ascii_encode=False)
-        sensor_1_8_0_sensor = self.config['1_8_0_sensor']
-        sensor_2_8_0_sensor = self.config['2_8_0_sensor']
+        sensor_1_8_0 = self.config['sensor_1_8_0']
+        sensor_2_8_0 = self.config['sensor_2_8_0']
 
         eon_1_8_0_report = {}
         self.log(json_response[0]['data'], level="DEBUG", ascii_encode=False)
         for eon_1_8_0_data in json_response[0]['data']:
             self.collect_daily_data(
-                eon_1_8_0_data, sensor_1_8_0_sensor, eon_1_8_0_report, "EON consumption energy total")
+                eon_1_8_0_data, sensor_1_8_0, eon_1_8_0_report, "EON consumption energy total")
 
         if len(eon_1_8_0_report) > 0:
             eon_1_8_0_report = {key: val for key,
                                 val in eon_1_8_0_report.items() if val != 0}
             self.normalize_eon_chart_data(
-                sensor_1_8_0_sensor, eon_1_8_0_report)
+                sensor_1_8_0, eon_1_8_0_report)
 
         eon_2_8_0_report = {}
         self.log(json_response[1]['data'], level="DEBUG", ascii_encode=False)
         for eon_2_8_0_data in json_response[1]['data']:
             self.collect_daily_data(
-                eon_2_8_0_data, sensor_2_8_0_sensor, eon_2_8_0_report, "EON export energy total")
+                eon_2_8_0_data, sensor_2_8_0, eon_2_8_0_report, "EON export energy total")
 
         if len(eon_2_8_0_report) > 0:
             eon_2_8_0_report = {key: val for key,
                                 val in eon_2_8_0_report.items() if val != 0}
             self.normalize_eon_chart_data(
-                sensor_2_8_0_sensor, eon_2_8_0_report)
+                sensor_2_8_0, eon_2_8_0_report)
 
         return eon_1_8_0_report, eon_2_8_0_report
 
