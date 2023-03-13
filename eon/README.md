@@ -114,10 +114,10 @@ Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezel
   normalized_energy_usage:
     class: NormalizedEnergyUsage
     module: normalized_energy_usage
-    host: <database connection host>
-    username: <username_db>
-    password: <password_db>
-    database: <database name>
+    db_host: <database connection host>
+    db_user: <username_db>
+    db_password: <password_db>
+    db_name: <database name>
     numdays: 4
     every_hour: 12
     run_daily_at: '07:40'
