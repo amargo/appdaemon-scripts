@@ -332,11 +332,12 @@ class ReadEon(hass.Hass):
                          str(eon_value), state_id)
                 cursor.execute(sql_query, sql_params)
                 connection.commit()
-            with connection.cursor() as cursor:
-                sql_query = """UPDATE events SET time_fired_ts = %s WHERE event_id = %s"""
-                sql_params = (datetime.datetime.timestamp(eon_time), event_id)
-                cursor.execute(sql_query, sql_params)
-                connection.commit()
+            # with connection.cursor() as cursor:
+            #     sql_query = """UPDATE events SET time_fired_ts = %s WHERE event_id = %s"""
+            #     # eon_formatted_date = eon_time.strftime('%Y-%m-%d %H:%M:%S')
+            #     sql_params = (datetime.datetime.timestamp(eon_time), event_id)
+            #     cursor.execute(sql_query, sql_params)
+            #     connection.commit()
         except Exception as err:
             self.log(f"Error - set_timestamp: {err}", level="ERROR")
         finally:
@@ -355,9 +356,12 @@ class ReadEon(hass.Hass):
                                      cursorclass=pymysql.cursors.DictCursor)
         try:
             with connection.cursor() as cursor:
-                sql_query = ("SELECT state_id, entity_id, state, event_id FROM states s "
+                sql_query = (
+                    "SELECT state_id, statem.entity_id as entity_id, state, event_id FROM states s "
                        "JOIN state_attributes sa on s.attributes_id = sa.attributes_id "
-                       "WHERE entity_id = %s ")
+                    "JOIN states_meta statem on s.metadata_id = statem.metadata_id "
+                    "WHERE statem.entity_id = %s "
+                )
                 if extra_parameter:
                     sql_query += extra_parameter
                 cursor.execute(sql_query, (eon_type))

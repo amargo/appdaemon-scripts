@@ -349,11 +349,13 @@ class NormalizedEnergyUsage(hass.Hass):
         try:
             with connection.cursor() as cursor:
                 sql = (
-                    "SELECT s.id as statistic_id, FROM_UNIXTIME(s.created_ts) as created, FROM_UNIXTIME(s.start_ts) as start_date, s.state as state, s.sum as sum_state, sm.statistic_id as statistic_id, fixed.state as fixed_state FROM statistics s "
-                    "join statistics_meta sm on s.metadata_id = sm.id "
-                    "join states fixed on fixed.entity_id = sm.statistic_id AND fixed.last_changed_ts = s.start_ts + (60*60) "
-                    "WHERE sm.statistic_id = %s "
-                    "AND s.start_ts between %s and %s "
+                    "SELECT main_query.statistic_id as statistic_id, FROM_UNIXTIME(main_query.created_ts) as created, FROM_UNIXTIME(main_query.start_ts) as start_date, main_query.state as state, main_query.sum_state as sum_state, main_query.entity_id as entity_id, s.state as fixed_state "
+                    "FROM (SELECT s.id as statistic_id, s.created_ts, s.start_ts, s.state as state, s.sum as sum_state, sm.statistic_id as entity_id FROM statistics s "
+                    "JOIN statistics_meta sm on s.metadata_id = sm.id WHERE sm.statistic_id = %s "
+                    ") as main_query, states s "
+                    "JOIN states_meta sm2 ON sm2.metadata_id = s.metadata_id "
+                    "WHERE main_query.entity_id = sm2.entity_id AND s.last_changed_ts = main_query.start_ts + (60*60) "
+                    "AND main_query.start_ts between %s and %s "
                     "ORDER BY start_ts;"
                 )
 
