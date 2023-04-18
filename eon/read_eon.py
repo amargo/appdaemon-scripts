@@ -238,7 +238,7 @@ class ReadEon(hass.Hass):
             )
 
         if len(eon_report) > 0:
-            eon_report = {key: val for key, val in eon_report.items()}
+            eon_report = {key: value for index, (key, value) in enumerate(eon_report.items()) if value != 0 or index == len(eon_report.items()) -1}
             self.normalize_eon_chart_data(eon_sensor_entity_id, eon_report)
 
         return eon_report
