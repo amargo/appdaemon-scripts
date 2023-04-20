@@ -20,6 +20,7 @@ class NormalizedEnergyUsage(hass.Hass):
             runtime = datetime.time(7, 40, 0)
 
         self.log(f"START - daily at {runtime}", level="INFO")
+        self.run_daily(self.setup, runtime)
 
 
     def setup(self, kwargs):
@@ -218,7 +219,9 @@ class NormalizedEnergyUsage(hass.Hass):
         sum_state = None
 
         for idx, row in enumerate(rows):
-            fixed_state = round(float(row["fixed_state"]), 3)
+            calculated_fixed_state = round(float(row["fixed_state"]), 3)
+            if calculated_fixed_state > 0:
+                fixed_state = calculated_fixed_state
             row["state"] = fixed_state
             sum_state = round(fixed_state - first_state_value, 3)
             row["sum_state"] = sum_state
