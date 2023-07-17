@@ -102,10 +102,8 @@ Szabadon továbbfejleszthető, 1-2 óra alatt készült el ezért nagy hibakezel
     db_name: '<database name>'
     sensor_1_8_0: sensor.eon_1_8_0_energy_total
     sensor_2_8_0: sensor.eon_2_8_0_energy_total
-    sensor_positive_a_energy: sensor.eon_positive_a_energy
-    sensor_negative_a_energy: sensor.eon_negative_a_energy
-    sensor_positive_a_power: sensor.eon_positive_a_power
-    sensor_negative_a_power: sensor.eon_negative_a_power 
+    positive_a_energy: sensor.eon_positive_a_energy_power
+    negative_a_energy: sensor.eon_negative_a_energy_power
   ```
   Ez után azt kell látnunk hogy megjelenik az áttekintés fülön a HA-ban
 
