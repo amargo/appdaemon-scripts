@@ -40,6 +40,7 @@ class NormalizedEnergyUsage(hass.Hass):
             if idx == len(date_list) - 1:
                 self.fix_rolling_states(self.config["sensor_1_8_0"], date.date())
                 self.fix_rolling_states(self.config["sensor_2_8_0"], date.date())
+        self.log("Data are normalized", level="INFO")
 
     def fix_rolling_states(self, eon_type, date):
         latest_row = self.get_states(eon_type, date)
